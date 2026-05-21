@@ -1,0 +1,4 @@
+ticker,todays_last_price_inr,price_as_of,last_eod_close_inr,tomorrow_buy_trigger_inr,profit_target_inr,qty,amount_inr,note
+MOTHERSON,137.0,2026-05-22,132.17,137.0,141.3,109,14933,Passes all recommendation gates
+APOLLOHOSP,8308.5,2026-05-22,8078.5,8291.88,8552.25,1,8292,Passes all recommendation gates
+GRASIM,3154.5,2026-05-22,2971.1,3154.5,3253.55,4,12618,Passes all recommendation gates

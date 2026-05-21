@@ -2,7 +2,6 @@
 venv/
 __pycache__/
 *.pyc
-# Track daily final output; ignore other scratch CSVs
 output/*
 !output/.gitkeep
 !output/final_output_*.csv

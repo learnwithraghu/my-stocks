@@ -33,7 +33,13 @@ python run_screener.py
 
 4. Deliver **`output/final_output_YYYYMMDD.csv`** only (script deletes other CSVs in `output/`).
 
-For the **pre-built Indian ETF** list, use `indian-etf-analyzer-python/analyze_etfs.py` instead (same CSV format).
+| Pre-built runner | Universe |
+|------------------|----------|
+| `indian-etf-analyzer-python/analyze_etfs.py` | 25 Indian ETFs (momentum gates) |
+| `indian-nifty100-analyzer-python/analyze_stocks.py` | Nifty 100 NSE stocks (**full Turtle** 55-day breakout) |
+| `scripts/run_screener.py` | Custom `CONFIG.universe` |
+
+All use the same `final_output_YYYYMMDD.csv` format.
 
 ## Required output CSV
 
