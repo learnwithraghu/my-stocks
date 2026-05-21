@@ -1,22 +1,25 @@
-# FinOps Certified: FinOps for AI
+# my-stocks
 
-This repository contains a structured syllabus for the FinOps Certified: FinOps for AI program, including section-by-section lesson plans and supporting demo scenarios focused on AWS cloud environments.
+Indian ETF screening with **Turtle trading** + **dual momentum**, local Python runner, and an agent skill for any index.
 
-## Repository Layout
+## Projects
 
-- `syllabus/README.md` – course overview, structure, prerequisites, certification details, and usage guidance
-- `syllabus/0x-*/` – seven section folders, each with per-topic subdirectories containing `lesson.md`
-- `syllabus/demos/README.md` – hands-on AWS demo playbook mapped to the lessons
-- `.kilo/` – plan documentation and assistant metadata
+| Path | Description |
+|------|-------------|
+| [`indian-etf-analyzer-python/`](indian-etf-analyzer-python/) | Daily screener → `output/final_output_YYYYMMDD.csv` |
+| [`.agent/turtle-dual-momentum/`](.agent/turtle-dual-momentum/) | Cursor/agent skill + generic `run_screener.py` for any universe |
 
-## Getting Started
+## Quick start
 
-1. Review `syllabus/README.md` to understand the course flow.
-2. Browse each section folder and open the relevant `lesson.md` for objectives, discussion topics, activities, and references.
-3. Use the AWS-focused demo scenarios in `syllabus/demos/README.md` to reinforce concepts with practical walk-throughs.
+```bash
+cd indian-etf-analyzer-python
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python analyze_etfs.py
+```
 
-## References
+See each folder’s README for config (budget ₹3L, ₹15K/trade, 3.14% profit target).
 
-- Official course overview: <https://learn.finops.org/path/certified-finops-for-ai>
-- FinOps Framework: <https://www.finops.org/framework/>
-- Training FAQs: <https://www.finops.org/training-certification/training-faqs/>
+## Disclaimer
+
+Screening tool only — not investment advice. Prices via Yahoo Finance may be delayed.
