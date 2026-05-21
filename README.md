@@ -8,6 +8,7 @@ Indian ETF screening with **Turtle trading** + **dual momentum**, local Python r
 |------|-------------|
 | [`indian-etf-analyzer-python/`](indian-etf-analyzer-python/) | 25 Indian ETFs → `final_output_YYYYMMDD.csv` |
 | [`indian-nifty100-analyzer-python/`](indian-nifty100-analyzer-python/) | Nifty 100 stocks, Turtle + Dual Momentum |
+| [`us-stock-analyzer-python/`](us-stock-analyzer-python/) | US large-cap stocks, **$50 one-time** budget |
 | [`.agent/turtle-dual-momentum/`](.agent/turtle-dual-momentum/) | Agent skill + generic `run_screener.py` for any universe |
 
 ## Quick start
