@@ -38,6 +38,7 @@ python run_screener.py
 | `indian-etf-analyzer-python/analyze_etfs.py` | 25 Indian ETFs (momentum gates) |
 | `indian-nifty100-analyzer-python/analyze_stocks.py` | Nifty 100 NSE stocks (**full Turtle** 55-day breakout) |
 | `us-stock-analyzer-python/analyze_stocks.py` | US large-cap stocks, **$50 one-time** budget, benchmark SPY |
+| `german-stock-analyzer-python/analyze_stocks.py` | Top 50 German stocks (DAX+MDAX), **$50 one-time USD**, benchmark EXS1 |
 | `scripts/run_screener.py` | Custom `CONFIG.universe` |
 
 All use the same `final_output_YYYYMMDD.csv` format.
@@ -127,3 +128,4 @@ CONFIG = {
 - Full Turtle + menu screener (Google Sheets): `claude-output.gs` in repo root
 - India ETF implementation: `indian-etf-analyzer-python/analyze_etfs.py`
 - US stocks ($50 one-time): `us-stock-analyzer-python/analyze_stocks.py` — `BUDGET_USD=50`, `MAX_SLOTS=1`, benchmark `SPY`, timezone `America/New_York`
+- German stocks ($50 one-time USD, top 50): `german-stock-analyzer-python/analyze_stocks.py` — `BUDGET_USD=50`, Yahoo suffix `.DE`, EUR→USD sizing, benchmark `EXS1`, timezone `Europe/Berlin`
