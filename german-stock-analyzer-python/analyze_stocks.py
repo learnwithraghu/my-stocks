@@ -2,7 +2,7 @@
 """
 German stock screener — Turtle trading + Dual Momentum (.agent/turtle-dual-momentum).
 Output: output/final_output_YYYYMMDD.csv (passing stocks only).
-One-time budget: $50 USD (single pick, whole shares) — same buy logic as US stock.
+One-time budget: $50 USD per pick (fractional shares allowed) — same buy logic as US stock.
 Prices on XETRA are EUR; gates use EUR, sizing/CSV amounts use USD via EUR/USD.
 """
 
@@ -23,7 +23,7 @@ CET = ZoneInfo("Europe/Berlin")
 BENCHMARK = "EXS1"
 BUDGET_USD = 50
 TRADE_SIZE_USD = 50
-MAX_SLOTS = 1
+FRACTIONAL_QTY_DECIMALS = 6
 PROFIT_TARGET_PCT = 3.14
 YAHOO_SUFFIX = ".DE"
 FX_PAIR = "EURUSD=X"
@@ -61,7 +61,7 @@ class StockPick:
     last_eod: float
     trigger: float
     target: float
-    qty: int
+    qty: float
     amount: float
     note: str
     score: float
@@ -156,14 +156,11 @@ def apply_trigger(live: float, eod: float, r1: float | None, r3: float | None) -
     return trig, note
 
 
-def position_size(trigger_eur: float, eurusd: float) -> tuple[int, float] | None:
+def position_size(trigger_eur: float, eurusd: float) -> tuple[float, float]:
+    """Fractional shares: deploy full $50 budget (trigger converted EUR → USD)."""
     trigger_usd = eur_to_usd(trigger_eur, eurusd)
-    if trigger_usd > BUDGET_USD:
-        return None
-    qty = max(1, int(TRADE_SIZE_USD // trigger_usd))
+    qty = round(TRADE_SIZE_USD / trigger_usd, FRACTIONAL_QTY_DECIMALS)
     amount_usd = round(qty * trigger_usd, 2)
-    if amount_usd > BUDGET_USD:
-        return None
     return qty, amount_usd
 
 
@@ -202,11 +199,7 @@ def analyze_stock(ticker: str, bench_3m: float | None, eurusd: float) -> StockPi
         return None
 
     trig_eur, note = apply_trigger(live_eur, eod_eur, r1, r3)
-    sized = position_size(trig_eur, eurusd)
-    if sized is None:
-        return None
-
-    qty, amount_usd = sized
+    qty, amount_usd = position_size(trig_eur, eurusd)
     score = round(r12 * 0.4 + (r6 or 0) * 0.3 + (r3 or 0) * 0.2 + (r1 or 0) * 0.1, 2)
     trig_usd = eur_to_usd(trig_eur, eurusd)
     target_usd = round(trig_usd * (1 + PROFIT_TARGET_PCT / 100), 2)
@@ -286,7 +279,6 @@ def main() -> int:
             picks.append(p)
 
     picks.sort(key=lambda x: x.score, reverse=True)
-    picks = picks[:MAX_SLOTS]
 
     print("\n--- Tomorrow orders (Turtle + Dual Momentum) ---")
     if picks:
@@ -295,8 +287,7 @@ def main() -> int:
                 f"  {p.ticker}: ${p.price} → LIMIT ${p.trigger} | target ${p.target} | "
                 f"qty {p.qty} | ${p.amount} | score {p.score}"
             )
-        deploy = sum(p.amount for p in picks)
-        print(f"  Slots: {len(picks)}/{MAX_SLOTS} | Deploy ~${deploy:.2f} of ${BUDGET_USD}")
+        print(f"  Picks: {len(picks)} | ${TRADE_SIZE_USD} fractional per row")
     else:
         print(f"  {NO_PICKS_NOTE}")
 

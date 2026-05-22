@@ -61,14 +61,12 @@ Every symbol that passed Steps 3–5 gets a **momentum score**:
 score = 0.4 × 12M return + 0.3 × 6M return + 0.2 × 3M return + 0.1 × 1M return
 ```
 
-We sort by score (highest first) and keep only what fits the **budget slots**:
+We sort by score (highest first). **US and German** screeners list **every symbol that passes** all gates (no share-price cap — fractional shares OK). **Nifty 100** keeps up to 20 whole-share slots:
 
-| Project | Budget | Slots |
-|---------|--------|-------|
-| Nifty 100 | ₹3,00,000 total | Up to 20 (₹15,000 each) |
-| US / German | $50 one-time | 1 pick |
-
-For US and German screeners, we also skip any symbol where **1 whole share costs more than $50** (German XETRA prices are converted EUR → USD first).
+| Project | Budget per row | Output |
+|---------|----------------|--------|
+| Nifty 100 | ₹15,000 each (up to 20 slots) | Whole shares |
+| US / German | $50 fractional per row | All gate passers |
 
 ### Step 7 — Set tomorrow’s buy order
 
@@ -81,9 +79,9 @@ For each final pick we compute:
 
 2. **Profit target** = trigger × **1.0314** (+3.14%)
 
-3. **Quantity** = `max(1, floor(trade_size ÷ trigger))` — whole shares only
+3. **Quantity** — Nifty 100 / India ETF: `max(1, floor(trade_size ÷ trigger))` whole shares. **US / German:** fractional `qty = $50 ÷ trigger` (any share price OK).
 
-4. **Amount** = qty × trigger (must stay within budget)
+4. **Amount** = qty × trigger (≈ $50 for US/German rows; within budget for India)
 
 Output lands in `output/final_output_YYYYMMDD.csv`. If **no symbol passes all gates**, the CSV has one row: `No stocks to recommend at this time`.
 
@@ -95,8 +93,8 @@ Output lands in `output/final_output_YYYYMMDD.csv`. If **no symbol passes all ga
 |------|-------------|
 | [`indian-etf-analyzer-python/`](indian-etf-analyzer-python/) | 25 Indian ETFs → `final_output_YYYYMMDD.csv` |
 | [`indian-nifty100-analyzer-python/`](indian-nifty100-analyzer-python/) | Nifty 100 stocks, Turtle + Dual Momentum |
-| [`us-stock-analyzer-python/`](us-stock-analyzer-python/) | US large-cap stocks, **$50 one-time** budget |
-| [`german-stock-analyzer-python/`](german-stock-analyzer-python/) | Top 50 German stocks, **$50 one-time USD** budget |
+| [`us-stock-analyzer-python/`](us-stock-analyzer-python/) | US large-cap stocks, **$50 fractional** per pick |
+| [`german-stock-analyzer-python/`](german-stock-analyzer-python/) | Top 50 German stocks, **$50 fractional USD** per pick |
 | [`.agent/turtle-dual-momentum/`](.agent/turtle-dual-momentum/) | Agent skill + generic `run_screener.py` for any universe |
 
 ## Quick start

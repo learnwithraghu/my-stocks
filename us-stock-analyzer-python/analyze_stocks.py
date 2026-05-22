@@ -2,7 +2,7 @@
 """
 US stock screener — Turtle trading + Dual Momentum (.agent/turtle-dual-momentum).
 Output: output/final_output_YYYYMMDD.csv (passing stocks only).
-One-time budget: $50 USD (single pick, whole shares).
+One-time budget: $50 USD per pick (fractional shares allowed).
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ ET = ZoneInfo("America/New_York")
 BENCHMARK = "SPY"
 BUDGET_USD = 50
 TRADE_SIZE_USD = 50
-MAX_SLOTS = 1
+FRACTIONAL_QTY_DECIMALS = 6
 PROFIT_TARGET_PCT = 3.14
 
 TURTLE_ENTRY_DAYS = 55
@@ -58,7 +58,7 @@ class StockPick:
     last_eod: float
     trigger: float
     target: float
-    qty: int
+    qty: float
     amount: float
     note: str
     score: float
@@ -129,13 +129,10 @@ def apply_trigger(live: float, eod: float, r1: float | None, r3: float | None) -
     return trig, note
 
 
-def position_size(trigger: float) -> tuple[int, float] | None:
-    if trigger > BUDGET_USD:
-        return None
-    qty = max(1, int(TRADE_SIZE_USD // trigger))
+def position_size(trigger: float) -> tuple[float, float]:
+    """Fractional shares: deploy full budget regardless of share price."""
+    qty = round(TRADE_SIZE_USD / trigger, FRACTIONAL_QTY_DECIMALS)
     amount = round(qty * trigger, 2)
-    if amount > BUDGET_USD:
-        return None
     return qty, amount
 
 
@@ -174,11 +171,7 @@ def analyze_stock(ticker: str, bench_3m: float | None) -> StockPick | None:
         return None
 
     trig, note = apply_trigger(live, eod, r1, r3)
-    sized = position_size(trig)
-    if sized is None:
-        return None
-
-    qty, amount = sized
+    qty, amount = position_size(trig)
     score = round(r12 * 0.4 + (r6 or 0) * 0.3 + (r3 or 0) * 0.2 + (r1 or 0) * 0.1, 2)
     target = round(trig * (1 + PROFIT_TARGET_PCT / 100), 2)
     return StockPick(ticker, live, today, eod, trig, target, qty, amount, note, score)
@@ -241,7 +234,6 @@ def main() -> int:
             picks.append(p)
 
     picks.sort(key=lambda x: x.score, reverse=True)
-    picks = picks[:MAX_SLOTS]
 
     print("\n--- Tomorrow orders (Turtle + Dual Momentum) ---")
     if picks:
@@ -250,8 +242,7 @@ def main() -> int:
                 f"  {p.ticker}: ${p.price} → LIMIT ${p.trigger} | target ${p.target} | "
                 f"qty {p.qty} | ${p.amount} | score {p.score}"
             )
-        deploy = sum(p.amount for p in picks)
-        print(f"  Slots: {len(picks)}/{MAX_SLOTS} | Deploy ~${deploy:.2f} of ${BUDGET_USD}")
+        print(f"  Picks: {len(picks)} | ${TRADE_SIZE_USD} fractional per row")
     else:
         print(f"  {NO_PICKS_NOTE}")
 

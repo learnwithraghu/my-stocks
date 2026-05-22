@@ -9,7 +9,8 @@ Screens **top 50** German large-cap stocks (DAX 40 + MDAX leaders) using **Turtl
 | **Turtle** | Live price ≥ 55-day high (excl. today); price > 20-day low |
 | **Dual momentum** | 12M return > 0%; 3M return beats **EXS1** (DAX ETF) 3M |
 | **Confirm** | RSI 14 between 40–80; volume ≥ 70% of 20-day avg |
-| **Budget** | Trigger ≤ **$50 USD** (1 whole share; EUR XETRA price converted via EUR/USD) |
+
+No share-price cap — **fractional shares** supported ($50 USD per row; XETRA EUR prices converted via EUR/USD).
 
 ## Run
 
@@ -28,7 +29,8 @@ python analyze_stocks.py
 
 `ticker`, `todays_last_price_inr`, `price_as_of`, `last_eod_close_inr`, `tomorrow_buy_trigger_inr`, `profit_target_inr`, `qty`, `amount_inr`, `note`
 
-- Top **1** stock that passes all gates and fits the **$50** budget
+- **All stocks** that pass all gates, ranked by momentum score
+- Each row: fractional `qty` = `$50 ÷ trigger`, `amount_inr` ≈ **$50**
 - If none: one row with `No stocks to recommend at this time`
 - Other CSVs in `output/` are deleted after each run
 
@@ -36,9 +38,8 @@ python analyze_stocks.py
 
 Edit top of `analyze_stocks.py`:
 
-- `BUDGET_USD` = 50 (one-time investment, same as US stock)
+- `BUDGET_USD` = 50 (per-pick allocation, same as US stock)
 - `TRADE_SIZE_USD` = 50
-- `MAX_SLOTS` = 1
 - `PROFIT_TARGET_PCT` = 3.14
 - `BENCHMARK` = EXS1 (iShares Core DAX ETF, XETRA)
 
