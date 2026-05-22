@@ -1,6 +1,93 @@
 # my-stocks
 
-Indian ETF screening with **Turtle trading** + **dual momentum**, local Python runner, and an agent skill for any index.
+Stock and ETF screening with **Turtle trading** + **dual momentum**, local Python runners, and an agent skill for any index.
+
+## How we pick stocks — 7 steps
+
+Every stock screener (Nifty 100, US, German) follows the same pipeline. **All gates must pass** — one failure and the symbol is skipped.
+
+### Step 1 — Start with a fixed universe
+
+We do not scan the whole market. Each project has a predefined list:
+
+| Project | Universe | Benchmark (for relative strength) |
+|---------|----------|----------------------------------|
+| Nifty 100 | 100 NSE large-caps | NIFTYBEES |
+| US stocks | ~96 S&P-style names | SPY |
+| German stocks | Top 50 DAX + MDAX | EXS1 (DAX ETF) |
+
+The Indian **ETF** analyzer uses the same momentum idea but a smaller ETF list and a lighter Turtle rule (20-day exit only, no 55-day breakout).
+
+### Step 2 — Pull price data
+
+For each symbol we download ~2 years of daily OHLCV from Yahoo Finance and fetch a **live/last price** (falls back to the last completed daily close if live is unavailable).
+
+### Step 3 — Turtle trend gates (Richard Dennis)
+
+Turtle trading asks: *is price breaking out in an uptrend?*
+
+| Gate | Rule |
+|------|------|
+| **55-day breakout** | Live price ≥ highest high of the prior **55** trading days (today excluded) |
+| **20-day exit zone** | Live price > lowest low of the prior **20** trading days (uptrend still intact) |
+
+Both must be true. This filters for symbols in a confirmed upward move, not a dead cat bounce.
+
+### Step 4 — Dual momentum gates (Gary Antonacci)
+
+Dual momentum combines **absolute** and **relative** strength:
+
+| Gate | Rule |
+|------|------|
+| **Absolute momentum** | 12-month return (252 trading days) **> 0%** — only assets going up over the year |
+| **Relative momentum** | 3-month return (63 days) **beats the benchmark’s** 3-month return (e.g. stock beats SPY) |
+
+A symbol must be winning on its own *and* beating the market proxy.
+
+### Step 5 — Confirmation filters
+
+Two extra sanity checks before we trust the signal:
+
+| Filter | Rule |
+|--------|------|
+| **RSI(14)** | Between **40 and 80** — not oversold junk, not extremely overbought |
+| **Volume** | Today’s volume ≥ **70%** of the 20-day average — enough participation |
+
+### Step 6 — Rank survivors and pick the best
+
+Every symbol that passed Steps 3–5 gets a **momentum score**:
+
+```
+score = 0.4 × 12M return + 0.3 × 6M return + 0.2 × 3M return + 0.1 × 1M return
+```
+
+We sort by score (highest first) and keep only what fits the **budget slots**:
+
+| Project | Budget | Slots |
+|---------|--------|-------|
+| Nifty 100 | ₹3,00,000 total | Up to 20 (₹15,000 each) |
+| US / German | $50 one-time | 1 pick |
+
+For US and German screeners, we also skip any symbol where **1 whole share costs more than $50** (German XETRA prices are converted EUR → USD first).
+
+### Step 7 — Set tomorrow’s buy order
+
+For each final pick we compute:
+
+1. **Buy trigger (LIMIT price)**  
+   - If 1-month return ≥ 3-month return → trigger = live price  
+   - Else → trigger = live price × 0.998 (slightly below, for a pullback entry)  
+   - Then raise trigger if needed for **app safety**: must be above `(last EOD close − ₹0.06) + ₹0.01` on NSE, or `(EOD − $0.01) + $0.01` on US/German
+
+2. **Profit target** = trigger × **1.0314** (+3.14%)
+
+3. **Quantity** = `max(1, floor(trade_size ÷ trigger))` — whole shares only
+
+4. **Amount** = qty × trigger (must stay within budget)
+
+Output lands in `output/final_output_YYYYMMDD.csv`. If **no symbol passes all gates**, the CSV has one row: `No stocks to recommend at this time`.
+
+---
 
 ## Projects
 
