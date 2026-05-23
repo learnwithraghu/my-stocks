@@ -1,0 +1,2 @@
+ticker,todays_last_price_inr,price_as_of,last_eod_close_inr,tomorrow_buy_trigger_inr,profit_target_inr,qty,amount_inr,note
+VBL,539.45,2026-05-23,539.45,539.4,556.34,27,14564,Passes all recommendation gates; trigger raised to app safety (> 539.39)
