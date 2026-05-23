@@ -1,0 +1,2 @@
+date,ticker,company_name,current_price_inr,f_score,quantity,investment_inr,market_cap_cr,roe_pct,debt_to_equity,pe_ratio,pb_ratio,note
+2026-05-23,HINDUNILVR,Hindustan Unilever Limited,2203.6,7,2,4407.2,517755.95,21.6,0.03,48.78,10.63,F-Score: 7/9 | ROA: No | OCF: Yes | Low Debt: Yes

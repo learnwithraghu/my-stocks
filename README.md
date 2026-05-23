@@ -40,7 +40,7 @@ Dual momentum combines **absolute** and **relative** strength:
 | Gate | Rule |
 |------|------|
 | **Absolute momentum** | 12-month return (252 trading days) **> 0%** — only assets going up over the year |
-| **Relative momentum** | 3-month return (63 days) **beats the benchmark’s** 3-month return (e.g. stock beats SPY) |
+| **Relative momentum** | 3-month return (63 days) **beats the benchmark's** 3-month return (e.g. stock beats SPY) |
 
 A symbol must be winning on its own *and* beating the market proxy.
 
@@ -51,7 +51,7 @@ Two extra sanity checks before we trust the signal:
 | Filter | Rule |
 |--------|------|
 | **RSI(14)** | Between **40 and 80** — not oversold junk, not extremely overbought |
-| **Volume** | Today’s volume ≥ **70%** of the 20-day average — enough participation |
+| **Volume** | Today's volume ≥ **70%** of the 20-day average — enough participation |
 
 ### Step 6 — Rank survivors and pick the best
 
@@ -68,7 +68,7 @@ We sort by score (highest first). **US and German** screeners list **every symbo
 | Nifty 100 | ₹15,000 each (up to 20 slots) | Whole shares |
 | US / German | $50 fractional per row | All gate passers |
 
-### Step 7 — Set tomorrow’s buy order
+### Step 7 — Set tomorrow's buy order
 
 For each final pick we compute:
 
@@ -95,18 +95,57 @@ Output lands in `output/final_output_YYYYMMDD.csv`. If **no symbol passes all ga
 | [`indian-nifty100-analyzer-python/`](indian-nifty100-analyzer-python/) | Nifty 100 stocks, Turtle + Dual Momentum |
 | [`us-stock-analyzer-python/`](us-stock-analyzer-python/) | US large-cap stocks, **$50 fractional** per pick |
 | [`german-stock-analyzer-python/`](german-stock-analyzer-python/) | Top 50 German stocks, **$50 fractional USD** per pick |
+| [`indian-nifty200-piotroski/`](indian-nifty200-piotroski/) | Nifty 200 stocks, Piotroski F-Score (1 winner, ₹5000 investment) |
 | [`.agent/turtle-dual-momentum/`](.agent/turtle-dual-momentum/) | Agent skill + generic `run_screener.py` for any universe |
 
 ## Quick start
 
+### 1. Enable virtual environment (always required)
+
 ```bash
-cd indian-etf-analyzer-python
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python analyze_etfs.py
+# From the project root
+cd /Users/raghunandanask/Desktop/github-repo/finopsai-course
+source venv/bin/activate
 ```
 
-See each folder’s README for config (budget ₹3L, ₹15K/trade, 3.14% profit target).
+> **Note:** Run `source venv/bin/activate` every time before running any script.
+
+### 2. Run all Python screeners at once
+
+```bash
+# Run all analyzers in one command
+python3 indian-etf-analyzer-python/analyze_etfs.py && \
+python3 indian-nifty100-analyzer-python/analyze_stocks.py && \
+python3 us-stock-analyzer-python/analyze_stocks.py && \
+python3 german-stock-analyzer-python/analyze_stocks.py && \
+python3 indian-nifty200-piotroski/analyze_piotroski.py
+```
+
+### 3. Run individual screeners
+
+```bash
+# Indian ETF Analyzer
+cd indian-etf-analyzer-python
+python3 analyze_etfs.py
+
+# Nifty 100 Turtle + Dual Momentum
+cd ../indian-nifty100-analyzer-python
+python3 analyze_stocks.py
+
+# US Stocks ($50 fractional)
+cd ../us-stock-analyzer-python
+python3 analyze_stocks.py
+
+# German Stocks ($50 fractional USD)
+cd ../german-stock-analyzer-python
+python3 analyze_stocks.py
+
+# Nifty 200 Piotroski F-Score (1 winner, ₹5000 investment)
+cd ../indian-nifty200-piotroski
+python3 analyze_piotroski.py
+```
+
+See each folder's README for config (budget ₹3L, ₹15K/trade, 3.14% profit target).
 
 ## Disclaimer
 
