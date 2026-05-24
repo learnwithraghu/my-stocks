@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 """
-US stock screener — Turtle trading + Dual Momentum (.agent/turtle-dual-momentum).
-Output: output/final_output_YYYYMMDD.csv (passing stocks only).
-One-time budget: $50 USD per pick (fractional shares allowed).
+US stock screener — Tight Consolidation Breakout (TCB).
+
+Method  : Stock consolidates in a tight range (<8% spread, 15 days),
+          then breaks above the range with 2x+ normal volume.
+          Post-breakout extension typically 15-25% in 5-10 trading days.
+
+Budget  : $20 USD per trade (fractional shares)
+Fee     : $1 per buy → need $24 exit on $20 to net $3 profit → 20% target
+Picks   : Top 2 by breakout score each day
 """
 
 from __future__ import annotations
@@ -19,22 +25,22 @@ import yfinance as yf
 from us_universe import US_STOCK_TICKERS
 
 ET = ZoneInfo("America/New_York")
-BENCHMARK = "SPY"
-BUDGET_USD = 50
-TRADE_SIZE_USD = 50
-FRACTIONAL_QTY_DECIMALS = 6
-PROFIT_TARGET_PCT = 3.14
 
-TURTLE_ENTRY_DAYS = 55
-TURTLE_EXIT_DAYS = 20
-MOM_1M, MOM_3M, MOM_6M, MOM_12M = 21, 63, 126, 252
-MIN_HISTORY = MOM_12M + 10
-HISTORY_PERIOD = "2y"
-RSI_MIN, RSI_MAX = 40, 80
-VOL_MIN_FACTOR = 0.70
-SAFETY_BELOW_LAST_EOD = 0.01
+TRADE_SIZE_USD          = 20
+PROFIT_TARGET_PCT       = 20.0      # need 20% gain to net $3 after $1 fee on $20 invest
+FRACTIONAL_QTY_DECIMALS = 6
+MAX_PICKS               = 2
+
+CONSOLIDATION_DAYS      = 15        # days to look back for the tight range
+CONSOLIDATION_RANGE_PCT = 0.12      # max spread: 12% (large caps swing wider than small caps)
+BREAKOUT_VOL_FACTOR     = 1.3       # breakout day volume must be 1.3x 20-day avg (large cap norm)
+VOL_LOOKBACK            = 20        # days for average volume baseline
+HISTORY_PERIOD          = "6mo"
+MIN_HISTORY             = CONSOLIDATION_DAYS + VOL_LOOKBACK + 10
+
+SAFETY_BELOW_LAST_EOD   = 0.01
 SAFETY_TICK_ABOVE_FLOOR = 0.01
-PASS_NOTE = "Passes all recommendation gates"
+
 NO_PICKS_NOTE = "No stocks to recommend at this time"
 
 OUTPUT_COLUMNS = [
@@ -66,21 +72,6 @@ class StockPick:
 
 def yahoo_symbol(ticker: str) -> str:
     return ticker
-
-
-def ret_pct(closes: pd.Series, days: int) -> float | None:
-    if len(closes) <= days:
-        return None
-    a, b = float(closes.iloc[-1]), float(closes.iloc[-1 - days])
-    return round((a - b) / b * 100, 2) if b else None
-
-
-def rsi14(closes: pd.Series) -> float | None:
-    if len(closes) < 16:
-        return None
-    d = closes.diff().iloc[-14:]
-    g, l = d.where(d > 0, 0.0).sum() / 14, (-d.where(d < 0, 0.0)).sum() / 14
-    return 100.0 if l == 0 else round(100 - 100 / (1 + g / l), 2)
 
 
 def fetch_history(ticker: str) -> pd.DataFrame | None:
@@ -118,62 +109,64 @@ def live_price(ticker: str) -> float | None:
     return None
 
 
-def apply_trigger(live: float, eod: float, r1: float | None, r3: float | None) -> tuple[float, str]:
-    raw = round(live, 2) if r1 is not None and r3 is not None and r1 >= r3 else round(live * 0.998, 2)
-    floor = round(eod - SAFETY_BELOW_LAST_EOD, 2)
-    min_t = round(floor + SAFETY_TICK_ABOVE_FLOOR, 2)
-    trig = round(max(raw, min_t), 2)
-    note = PASS_NOTE
-    if trig > raw:
-        note = f"{PASS_NOTE}; trigger raised to app safety (> {floor})"
-    return trig, note
-
-
 def position_size(trigger: float) -> tuple[float, float]:
-    """Fractional shares: deploy full budget regardless of share price."""
     qty = round(TRADE_SIZE_USD / trigger, FRACTIONAL_QTY_DECIMALS)
     amount = round(qty * trigger, 2)
     return qty, amount
 
 
-def analyze_stock(ticker: str, bench_3m: float | None) -> StockPick | None:
+def analyze_stock(ticker: str) -> StockPick | None:
     df = fetch_history(ticker)
     if df is None:
         return None
 
     c, h, l, v = df["Close"], df["High"], df["Low"], df["Volume"]
-    eod = round(float(c.iloc[-1]), 2)
-    live = live_price(ticker) or eod
-    today = datetime.now(ET).strftime("%Y-%m-%d")
 
-    r1, r3, r6, r12 = ret_pct(c, MOM_1M), ret_pct(c, MOM_3M), ret_pct(c, MOM_6M), ret_pct(c, MOM_12M)
-    hi55 = float(h.iloc[-(TURTLE_ENTRY_DAYS + 1):-1].max())
-    lo20 = float(l.iloc[-(TURTLE_EXIT_DAYS + 1):-1].min())
+    # ── Consolidation window: 15 bars ending yesterday (exclude today) ───────
+    consol_h = h.iloc[-(CONSOLIDATION_DAYS + 1):-1]
+    consol_l = l.iloc[-(CONSOLIDATION_DAYS + 1):-1]
+    range_high = float(consol_h.max())
+    range_low  = float(consol_l.min())
 
-    breakout = live >= hi55
-    above_exit = live > lo20
-    rs = round(r3 - bench_3m, 2) if r3 is not None and bench_3m is not None else None
-    rsi_v = rsi14(c)
-    avg_v = float(v.iloc[-21:-1].mean()) if len(v) > 21 else 0
-    vol_ok = avg_v > 0 and float(v.iloc[-1]) / avg_v >= VOL_MIN_FACTOR
-
-    if not (
-        breakout
-        and above_exit
-        and r12 is not None
-        and r12 > 0
-        and rs is not None
-        and rs > 0
-        and rsi_v is not None
-        and RSI_MIN <= rsi_v <= RSI_MAX
-        and vol_ok
-    ):
+    if range_low <= 0:
         return None
 
-    trig, note = apply_trigger(live, eod, r1, r3)
-    qty, amount = position_size(trig)
-    score = round(r12 * 0.4 + (r6 or 0) * 0.3 + (r3 or 0) * 0.2 + (r1 or 0) * 0.1, 2)
+    range_pct = (range_high - range_low) / range_low
+    if range_pct > CONSOLIDATION_RANGE_PCT:
+        return None  # range too wide — not a tight consolidation
+
+    # ── Breakout: today's price must clear the consolidation high ────────────
+    eod  = round(float(c.iloc[-1]), 2)
+    live = live_price(ticker) or eod
+
+    if live <= range_high:
+        return None  # not broken out yet
+
+    # ── Volume surge on breakout day: 2x+ 20-day average ────────────────────
+    avg_vol  = float(v.iloc[-(VOL_LOOKBACK + 1):-1].mean())
+    today_vol = float(v.iloc[-1])
+    vol_ratio = today_vol / avg_vol if avg_vol > 0 else 0.0
+
+    if vol_ratio < BREAKOUT_VOL_FACTOR:
+        return None  # breakout not confirmed by volume
+
+    # ── Entry trigger (enter at breakout price, apply safety floor) ──────────
+    floor = round(eod - SAFETY_BELOW_LAST_EOD, 2)
+    trig  = round(max(live, floor + SAFETY_TICK_ABOVE_FLOOR), 2)
     target = round(trig * (1 + PROFIT_TARGET_PCT / 100), 2)
+    qty, amount = position_size(trig)
+
+    # ── Score: breakout strength × volume surge ───────────────────────────────
+    breakout_pct = (live - range_high) / range_high * 100
+    score = round(breakout_pct * vol_ratio, 4)
+
+    today = datetime.now(ET).strftime("%Y-%m-%d")
+    note = (
+        f"TCB: range {range_pct*100:.1f}% over {CONSOLIDATION_DAYS}d | "
+        f"breakout +{breakout_pct:.1f}% above range | "
+        f"vol {vol_ratio:.1f}x avg | score {score:.2f}"
+    )
+
     return StockPick(ticker, live, today, eod, trig, target, qty, amount, note, score)
 
 
@@ -214,39 +207,42 @@ def main() -> int:
     run_date = datetime.now(ET).strftime("%Y%m%d")
     final_path = out_dir / f"final_output_{run_date}.csv"
 
+    print("US Stock Tight Consolidation Breakout (TCB) Screener")
     print(
-        f"US Stock Turtle + Dual Momentum | {len(US_STOCK_TICKERS)} stocks | "
-        f"budget ${BUDGET_USD} (one-time) | +{PROFIT_TARGET_PCT}%"
+        f"Universe: {len(US_STOCK_TICKERS)} stocks | "
+        f"${TRADE_SIZE_USD}/trade | target +{PROFIT_TARGET_PCT}% (~${TRADE_SIZE_USD * PROFIT_TARGET_PCT/100 - 1:.0f} net) | "
+        f"top {MAX_PICKS} picks"
     )
-    print(f"Benchmark RS: {BENCHMARK} | Run: {datetime.now(ET).strftime('%Y-%m-%d %H:%M ET')}\n")
+    print(f"Consolidation: {CONSOLIDATION_DAYS}d tight range <{CONSOLIDATION_RANGE_PCT*100:.0f}% | "
+          f"Vol surge: {BREAKOUT_VOL_FACTOR}x | Run: {datetime.now(ET).strftime('%Y-%m-%d %H:%M ET')}\n")
 
-    bdf = fetch_history(BENCHMARK)
-    bench_3m = ret_pct(bdf["Close"], MOM_3M) if bdf is not None else None
-    if bench_3m is not None:
-        print(f"{BENCHMARK} 3M return: {bench_3m}%\n")
-
-    picks: list[StockPick] = []
+    all_picks: list[StockPick] = []
     for i, ticker in enumerate(US_STOCK_TICKERS, 1):
         print(f"[{i}/{len(US_STOCK_TICKERS)}] {ticker}…", end=" ", flush=True)
-        p = analyze_stock(ticker, bench_3m)
-        print("PASS" if p else "skip")
+        p = analyze_stock(ticker)
         if p:
-            picks.append(p)
+            parts = p.note.split("|")
+            print(f"PASS  score:{p.score:.2f}  {parts[1].strip()}  {parts[2].strip()}")
+            all_picks.append(p)
+        else:
+            print("skip")
 
-    picks.sort(key=lambda x: x.score, reverse=True)
+    all_picks.sort(key=lambda x: x.score, reverse=True)
+    winners = all_picks[:MAX_PICKS]
 
-    print("\n--- Tomorrow orders (Turtle + Dual Momentum) ---")
-    if picks:
-        for p in picks:
+    print(f"\n--- TCB picks (top {MAX_PICKS} of {len(all_picks)} candidates) ---")
+    if winners:
+        for rank, p in enumerate(winners, 1):
             print(
-                f"  {p.ticker}: ${p.price} → LIMIT ${p.trigger} | target ${p.target} | "
+                f"  #{rank} {p.ticker}: ${p.price} → LIMIT ${p.trigger} | "
+                f"target ${p.target} (+{PROFIT_TARGET_PCT}%) | "
                 f"qty {p.qty} | ${p.amount} | score {p.score}"
             )
-        print(f"  Picks: {len(picks)} | ${TRADE_SIZE_USD} fractional per row")
+        print(f"\n  Net profit if target hit: ~${TRADE_SIZE_USD * PROFIT_TARGET_PCT/100 - 1:.0f} per trade after $1 fee")
     else:
         print(f"  {NO_PICKS_NOTE}")
 
-    write_csv(final_path, picks)
+    write_csv(final_path, winners)
     cleanup_other_csvs(out_dir, final_path)
     return 0
 
