@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Nifty 200 Piotroski F-Score Stock Picker
-----------------------------------------
-Applies the Piotroski F-Score strategy on Nifty 200 stocks.
-- Investment per stock: 5000 INR
-- Picks exactly 1 winner (highest F-Score, tie-broken by market cap)
-- Sources data from Yahoo Finance
-- Overwrites CSV output each run with current date
+Nifty 200 Three-Stage Stock Screener
+--------------------------------------
+Stage 1: Price > 200-Day Moving Average  (trend health pre-filter)
+Stage 2: Piotroski F-Score >= 7          (true YoY comparisons, not proxies)
+Stage 3: 12-1 Month Price Momentum       (market confirmation; highest wins)
+
+Investment per winner: 5000 INR
 """
 
 from __future__ import annotations
@@ -25,6 +25,8 @@ from nifty200_universe import NIFTY200_TICKERS
 
 IST = ZoneInfo("Asia/Kolkata")
 INVESTMENT_INR = 5000
+MIN_FSCORE = 7
+
 OUTPUT_COLUMNS = [
     "date",
     "ticker",
@@ -38,6 +40,8 @@ OUTPUT_COLUMNS = [
     "debt_to_equity",
     "pe_ratio",
     "pb_ratio",
+    "momentum_12_1_pct",
+    "above_200dma",
     "note",
 ]
 
@@ -55,6 +59,8 @@ class StockResult:
     debt_to_equity: Optional[float]
     pe_ratio: Optional[float]
     pb_ratio: Optional[float]
+    momentum_12_1_pct: Optional[float]
+    above_200dma: bool
     note: str
 
 
@@ -69,172 +75,184 @@ def safe_get(info: dict, keys: list[str], default=None):
     return default
 
 
-def calculate_f_score(ticker: str, info: dict, hist: pd.DataFrame) -> tuple[int, dict]:
+def df_row(df: pd.DataFrame, names: list[str]) -> Optional[pd.Series]:
+    """Return the first matching row from a financial DataFrame by trying multiple name variants."""
+    for name in names:
+        if name in df.index:
+            return df.loc[name]
+    return None
+
+
+def val(series: Optional[pd.Series], col: int) -> Optional[float]:
+    """Safely extract a float from a financial series at a given column index."""
+    if series is None:
+        return None
+    try:
+        v = series.iloc[col]
+        return None if pd.isna(v) else float(v)
+    except (IndexError, TypeError):
+        return None
+
+
+def fetch_price_history(ticker: str) -> Optional[pd.DataFrame]:
+    """Fetch 15 months of daily price history. Returns None if data is insufficient."""
+    try:
+        hist = yf.Ticker(yahoo_symbol(ticker)).history(period="15mo")
+        return hist if (not hist.empty and len(hist) >= 200) else None
+    except Exception:
+        return None
+
+
+def passes_200dma_filter(hist: pd.DataFrame) -> bool:
+    sma200 = hist["Close"].rolling(200).mean().iloc[-1]
+    current = hist["Close"].iloc[-1]
+    return bool(current > sma200)
+
+
+def calculate_momentum_12_1(hist: pd.DataFrame) -> Optional[float]:
+    """12-1 month return: skips the most recent month to avoid short-term mean-reversion noise."""
+    if len(hist) < 252:
+        return None
+    price_1m = hist["Close"].iloc[-22]
+    price_12m = hist["Close"].iloc[-252]
+    if price_12m <= 0:
+        return None
+    return round((price_1m / price_12m - 1) * 100, 2)
+
+
+def calculate_f_score(
+    financials: pd.DataFrame,
+    balance_sheet: pd.DataFrame,
+    cashflow: Optional[pd.DataFrame],
+) -> tuple[int, dict]:
     """
-    Calculate Piotroski F-Score (0-9) using available Yahoo Finance data.
-    
-    9 Criteria:
-    Profitability (4 points):
-    1. Positive Net Income (ROA > 0)
-    2. Positive Operating Cash Flow
-    3. ROA improvement YoY
-    4. Operating Cash Flow > Net Income
-    
-    Leverage/Liquidity (3 points):
-    5. Decrease in Debt/Equity ratio YoY
-    6. Increase in Current Ratio YoY
-    7. No new equity issued
-    
-    Efficiency (2 points):
-    8. Increase in Gross Margin YoY
-    9. Increase in Asset Turnover YoY
+    Piotroski F-Score (0-9) using true year-over-year comparisons.
+    col 0 = most recent annual period; col 1 = prior year.
     """
     score = 0
-    details = {}
-    
-    # Get financial data from info
-    net_income = safe_get(info, ["netIncomeToCommon"])
-    total_assets = safe_get(info, ["totalAssets"])
-    total_debt = safe_get(info, ["totalDebt"])
-    shareholders_equity = safe_get(info, ["stockholdersEquity", "totalStockholderEquity"])
-    operating_cashflow = safe_get(info, ["operatingCashflow"])
-    revenue = safe_get(info, ["totalRevenue", "revenue"])
-    gross_profit = safe_get(info, ["grossProfits", "grossProfit"])
-    
-    # Calculate ROA
-    roa = None
-    if net_income and total_assets and total_assets > 0:
-        roa = net_income / total_assets
-    
-    # 1. Positive ROA
-    if roa and roa > 0:
-        score += 1
-        details["positive_roa"] = True
-    else:
-        details["positive_roa"] = False
-    
-    # 2. Positive Operating Cash Flow
-    if operating_cashflow and operating_cashflow > 0:
-        score += 1
-        details["positive_ocf"] = True
-    else:
-        details["positive_ocf"] = False
-    
-    # 3. ROA improvement (we use current ROA vs trailing, simplified)
-    # Since we can't easily get prior year, we'll use a proxy
-    trailing_eps = safe_get(info, ["trailingEps"])
-    forward_eps = safe_get(info, ["forwardEps"])
-    if trailing_eps and forward_eps and forward_eps > trailing_eps:
-        score += 1
-        details["roa_improvement"] = True
-    else:
-        details["roa_improvement"] = False
-    
-    # 4. Operating Cash Flow > Net Income
-    if operating_cashflow and net_income and operating_cashflow > net_income:
-        score += 1
-        details["ocf_gt_ni"] = True
-    else:
-        details["ocf_gt_ni"] = False
-    
-    # 5. Debt/Equity ratio improvement
-    debt_to_equity = safe_get(info, ["debtToEquity"])
-    if debt_to_equity is not None:
-        # Lower is better; if D/E < 100% (1.0), score a point
-        if debt_to_equity < 100:
-            score += 1
-            details["low_debt"] = True
-        else:
-            details["low_debt"] = False
-    else:
-        details["low_debt"] = False
-    
-    # 6. Current Ratio check
-    current_ratio = safe_get(info, ["currentRatio"])
-    if current_ratio and current_ratio > 1:
-        score += 1
-        details["good_current_ratio"] = True
-    else:
-        details["good_current_ratio"] = False
-    
-    # 7. No new equity (check shares outstanding)
-    shares_outstanding = safe_get(info, ["sharesOutstanding"])
-    if shares_outstanding:
-        # Assume no dilution if we can't compare
-        score += 1
-        details["no_dilution"] = True
-    else:
-        details["no_dilution"] = False
-    
-    # 8. Gross Margin improvement proxy
-    profit_margin = safe_get(info, ["profitMargins"])
-    if profit_margin and profit_margin > 0.10:  # > 10% profit margin
-        score += 1
-        details["good_margin"] = True
-    else:
-        details["good_margin"] = False
-    
-    # 9. Asset Turnover proxy (Revenue / Total Assets)
-    if revenue and total_assets and total_assets > 0:
-        asset_turnover = revenue / total_assets
-        if asset_turnover > 0.5:  # Reasonable turnover
-            score += 1
-            details["good_turnover"] = True
-        else:
-            details["good_turnover"] = False
-    else:
-        details["good_turnover"] = False
-    
-    return score, details
+    d: dict[str, bool] = {}
+
+    ni = df_row(financials, ["Net Income", "Net Income Common Stockholders"])
+    rev = df_row(financials, ["Total Revenue", "Operating Revenue"])
+    gp = df_row(financials, ["Gross Profit"])
+    ta = df_row(balance_sheet, ["Total Assets"])
+    td = df_row(balance_sheet, ["Total Debt"])
+    eq = df_row(balance_sheet, ["Stockholders Equity", "Common Stock Equity"])
+    ca = df_row(balance_sheet, ["Current Assets"])
+    cl = df_row(balance_sheet, ["Current Liabilities"])
+    sh = df_row(balance_sheet, ["Ordinary Shares Number", "Share Issued"])
+    ocf_row = (
+        df_row(cashflow, ["Operating Cash Flow", "Total Cash From Operating Activities"])
+        if cashflow is not None and not cashflow.empty
+        else None
+    )
+
+    ni0, ni1 = val(ni, 0), val(ni, 1)
+    rev0, rev1 = val(rev, 0), val(rev, 1)
+    gp0, gp1 = val(gp, 0), val(gp, 1)
+    ta0, ta1 = val(ta, 0), val(ta, 1)
+    td0, td1 = val(td, 0), val(td, 1)
+    eq0, eq1 = val(eq, 0), val(eq, 1)
+    ca0, ca1 = val(ca, 0), val(ca, 1)
+    cl0, cl1 = val(cl, 0), val(cl, 1)
+    sh0, sh1 = val(sh, 0), val(sh, 1)
+    ocf0 = val(ocf_row, 0)
+
+    roa0 = (ni0 / ta0) if (ni0 is not None and ta0 and ta0 > 0) else None
+    roa1 = (ni1 / ta1) if (ni1 is not None and ta1 and ta1 > 0) else None
+
+    # Profitability (4 points)
+    d["positive_roa"] = bool(roa0 is not None and roa0 > 0)
+    d["positive_ocf"] = bool(ocf0 is not None and ocf0 > 0)
+    d["roa_improvement"] = bool(roa0 is not None and roa1 is not None and roa0 > roa1)
+    d["ocf_gt_ni"] = bool(ocf0 is not None and ni0 is not None and ocf0 > ni0)
+
+    # Leverage / Liquidity (3 points)
+    de0 = (td0 / eq0) if (td0 is not None and eq0 and eq0 > 0) else None
+    de1 = (td1 / eq1) if (td1 is not None and eq1 and eq1 > 0) else None
+    d["de_decrease"] = bool(de0 is not None and de1 is not None and de0 < de1)
+
+    cr0 = (ca0 / cl0) if (ca0 is not None and cl0 and cl0 > 0) else None
+    cr1 = (ca1 / cl1) if (ca1 is not None and cl1 and cl1 > 0) else None
+    d["cr_increase"] = bool(cr0 is not None and cr1 is not None and cr0 > cr1)
+
+    d["no_dilution"] = bool(sh0 is not None and sh1 is not None and sh0 <= sh1)
+
+    # Efficiency (2 points)
+    gm0 = (gp0 / rev0) if (gp0 is not None and rev0 and rev0 > 0) else None
+    gm1 = (gp1 / rev1) if (gp1 is not None and rev1 and rev1 > 0) else None
+    d["gm_improvement"] = bool(gm0 is not None and gm1 is not None and gm0 > gm1)
+
+    at0 = (rev0 / ta0) if (rev0 is not None and ta0 and ta0 > 0) else None
+    at1 = (rev1 / ta1) if (rev1 is not None and ta1 and ta1 > 0) else None
+    d["at_improvement"] = bool(at0 is not None and at1 is not None and at0 > at1)
+
+    for v in d.values():
+        score += v
+
+    return score, d
 
 
-def analyze_stock(ticker: str) -> Optional[StockResult]:
+def analyze_stock(ticker: str, hist: pd.DataFrame) -> Optional[StockResult]:
+    """Stage 2+3: fetch fundamentals, compute F-score, compute momentum."""
     try:
-        symbol = yahoo_symbol(ticker)
-        stock = yf.Ticker(symbol)
+        stock = yf.Ticker(yahoo_symbol(ticker))
         info = stock.info or {}
-        
         if not info:
             return None
-        
-        # Get current price
+
         current_price = safe_get(info, ["currentPrice", "regularMarketPrice", "previousClose"])
         if not current_price or current_price <= 0:
             return None
-        
-        # Get historical data for additional calculations
-        hist = stock.history(period="1y")
-        if hist.empty:
+
+        try:
+            financials = stock.financials
+            balance_sheet = stock.balance_sheet
+            cashflow = stock.cashflow
+        except Exception:
             return None
-        
-        # Calculate F-Score
-        f_score, details = calculate_f_score(ticker, info, hist)
-        
-        # Get additional metrics
+
+        if (
+            financials is None or financials.empty
+            or balance_sheet is None or balance_sheet.empty
+            or financials.shape[1] < 2
+            or balance_sheet.shape[1] < 2
+        ):
+            return None
+
+        f_score, details = calculate_f_score(financials, balance_sheet, cashflow)
+        if f_score < MIN_FSCORE:
+            return None
+
+        momentum = calculate_momentum_12_1(hist)
+
         market_cap = safe_get(info, ["marketCap"])
         market_cap_cr = round(market_cap / 1e7, 2) if market_cap else None
-        
+
         roe = safe_get(info, ["returnOnEquity"])
         roe_pct = round(roe * 100, 2) if roe else None
-        
+
         debt_to_equity = safe_get(info, ["debtToEquity"])
-        if debt_to_equity:
-            debt_to_equity = round(debt_to_equity / 100, 2)  # Convert to ratio
-        
+        if debt_to_equity is not None:
+            debt_to_equity = round(debt_to_equity / 100, 2)
+
         pe_ratio = safe_get(info, ["trailingPE", "forwardPE"])
         pb_ratio = safe_get(info, ["priceToBook"])
-        
         company_name = safe_get(info, ["longName", "shortName"], ticker)
-        
-        # Calculate quantity for 5000 INR investment
         quantity = max(1, int(INVESTMENT_INR // current_price))
         investment = round(quantity * current_price, 2)
-        
-        note = f"F-Score: {f_score}/9 | "
-        note += f"ROA: {'Yes' if details.get('positive_roa') else 'No'} | "
-        note += f"OCF: {'Yes' if details.get('positive_ocf') else 'No'} | "
-        note += f"Low Debt: {'Yes' if details.get('low_debt') else 'No'}"
-        
+
+        y = lambda k: "Y" if details.get(k) else "N"
+        mom_str = f"{momentum:+.1f}%" if momentum is not None else "N/A"
+        note = (
+            f"F:{f_score}/9 Trend:Above200DMA Mom:{mom_str} | "
+            f"ROA:{y('positive_roa')} OCF:{y('positive_ocf')} "
+            f"ROAimprv:{y('roa_improvement')} Accrual:{y('ocf_gt_ni')} "
+            f"DEdown:{y('de_decrease')} CRup:{y('cr_increase')} "
+            f"NoDilut:{y('no_dilution')} GMup:{y('gm_improvement')} "
+            f"ATup:{y('at_improvement')}"
+        )
+
         return StockResult(
             ticker=ticker,
             company_name=company_name,
@@ -247,9 +265,11 @@ def analyze_stock(ticker: str) -> Optional[StockResult]:
             debt_to_equity=debt_to_equity,
             pe_ratio=round(pe_ratio, 2) if pe_ratio else None,
             pb_ratio=round(pb_ratio, 2) if pb_ratio else None,
+            momentum_12_1_pct=momentum,
+            above_200dma=True,
             note=note,
         )
-    
+
     except Exception as e:
         print(f"  [warn] {ticker}: {e}", file=sys.stderr)
         return None
@@ -258,7 +278,7 @@ def analyze_stock(ticker: str) -> Optional[StockResult]:
 def write_csv(path: Path, result: Optional[StockResult]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     today = datetime.now(IST).strftime("%Y-%m-%d")
-    
+
     if result:
         row = asdict(result)
         row["date"] = today
@@ -267,7 +287,7 @@ def write_csv(path: Path, result: Optional[StockResult]) -> None:
         df = pd.DataFrame([{c: "" for c in OUTPUT_COLUMNS}])
         df.loc[0, "date"] = today
         df.loc[0, "note"] = "No stock pick available at this time"
-    
+
     df = df[OUTPUT_COLUMNS]
     df.to_csv(path, index=False)
     print(f"Wrote {path}")
@@ -275,53 +295,91 @@ def write_csv(path: Path, result: Optional[StockResult]) -> None:
 
 def main() -> int:
     root = Path(__file__).resolve().parent
-    out_dir = root / "output"
-    csv_path = out_dir / "piotroski_winner.csv"
-    
+    csv_path = root / "output" / "piotroski_winner.csv"
     today = datetime.now(IST).strftime("%Y-%m-%d")
-    
-    print(f"Nifty 200 Piotroski F-Score Screener")
-    print(f"Investment: ₹{INVESTMENT_INR:,} per stock")
-    print(f"Universe: {len(NIFTY200_TICKERS)} stocks")
-    print(f"Run Date: {today}\n")
-    
-    results = []
+
+    print("Nifty 200 Three-Stage Stock Screener")
+    print(f"Stage 1: Price > 200-Day MA  |  Stage 2: Piotroski F >= {MIN_FSCORE}/9  |  Stage 3: 12-1M Momentum")
+    print(f"Investment: Rs{INVESTMENT_INR:,}  |  Universe: {len(NIFTY200_TICKERS)} stocks  |  Date: {today}\n")
+
+    # ── Stage 1: 200 DMA filter ──────────────────────────────────────────────
+    print(f"── Stage 1: 200-Day Moving Average filter ({len(NIFTY200_TICKERS)} stocks) ──")
+    stage1_survivors: list[tuple[str, pd.DataFrame]] = []
+
     for i, ticker in enumerate(NIFTY200_TICKERS, 1):
-        print(f"[{i}/{len(NIFTY200_TICKERS)}] {ticker}...", end=" ", flush=True)
-        result = analyze_stock(ticker)
-        if result:
-            print(f"F-Score: {result.f_score}")
-            results.append(result)
+        print(f"  [{i:3d}/{len(NIFTY200_TICKERS)}] {ticker:<20}", end=" ", flush=True)
+        hist = fetch_price_history(ticker)
+        if hist is None:
+            print("skip (no data)")
+            continue
+        if passes_200dma_filter(hist):
+            print("pass")
+            stage1_survivors.append((ticker, hist))
         else:
-            print("skip")
-    
-    # Sort by F-Score (descending), then by market cap (descending) for tie-break
-    results.sort(key=lambda x: (x.f_score, x.market_cap_cr or 0), reverse=True)
-    
-    # Pick the winner (top 1)
-    winner = results[0] if results else None
-    
-    print("\n" + "="*60)
-    print("PIOTROSKI F-SCORE WINNER")
-    print("="*60)
-    
+            print("fail (below 200DMA)")
+
+    print(f"\nStage 1: {len(NIFTY200_TICKERS)} -> {len(stage1_survivors)} stocks above 200 DMA\n")
+
+    # ── Stage 2: Piotroski F-Score filter ───────────────────────────────────
+    print(f"── Stage 2: Piotroski F-Score filter (need >= {MIN_FSCORE}/9, true YoY) ──")
+    candidates: list[StockResult] = []
+
+    for j, (ticker, hist) in enumerate(stage1_survivors, 1):
+        print(f"  [{j:3d}/{len(stage1_survivors)}] {ticker:<20}", end=" ", flush=True)
+        result = analyze_stock(ticker, hist)
+        if result:
+            print(f"pass F:{result.f_score}/9")
+            candidates.append(result)
+        else:
+            print(f"fail (F < {MIN_FSCORE} or missing data)")
+
+    print(f"\nStage 2: {len(stage1_survivors)} -> {len(candidates)} stocks with F >= {MIN_FSCORE}\n")
+
+    # ── Stage 3: Momentum tiebreaker ────────────────────────────────────────
+    winner = None
+    if candidates:
+        with_mom = [c for c in candidates if c.momentum_12_1_pct is not None]
+        if with_mom:
+            positive = [c for c in with_mom if c.momentum_12_1_pct > 0]
+            pool = positive if positive else with_mom
+            winner = max(pool, key=lambda x: x.momentum_12_1_pct)
+        else:
+            # Fallback: no momentum data — sort by F-score then market cap
+            candidates.sort(key=lambda x: (x.f_score, x.market_cap_cr or 0), reverse=True)
+            winner = candidates[0]
+
+    # ── Summary ──────────────────────────────────────────────────────────────
+    print("=" * 60)
+    print("STAGE SUMMARY")
+    print(f"  Stage 1 (200 DMA)  : {len(NIFTY200_TICKERS)} -> {len(stage1_survivors)} stocks")
+    print(f"  Stage 2 (F >= {MIN_FSCORE})   : {len(stage1_survivors)} -> {len(candidates)} stocks")
+    print(f"  Stage 3 (Momentum) : {len(candidates)} -> 1 winner")
+    print("=" * 60)
+
+    print("\nTHREE-STAGE WINNER")
+    print("=" * 60)
+
     if winner:
-        print(f"Stock: {winner.ticker} ({winner.company_name})")
-        print(f"Current Price: ₹{winner.current_price_inr}")
-        print(f"F-Score: {winner.f_score}/9")
-        print(f"Quantity to Buy: {winner.quantity} shares")
-        print(f"Investment Amount: ₹{winner.investment_inr}")
-        print(f"Market Cap: ₹{winner.market_cap_cr} Cr" if winner.market_cap_cr else "Market Cap: N/A")
-        print(f"ROE: {winner.roe_pct}%" if winner.roe_pct else "ROE: N/A")
-        print(f"D/E: {winner.debt_to_equity}" if winner.debt_to_equity else "D/E: N/A")
-        print(f"P/E: {winner.pe_ratio}" if winner.pe_ratio else "P/E: N/A")
-        print(f"P/B: {winner.pb_ratio}" if winner.pb_ratio else "P/B: N/A")
-        print(f"Note: {winner.note}")
+        mom_str = f"{winner.momentum_12_1_pct:+.1f}%" if winner.momentum_12_1_pct is not None else "N/A"
+        print(f"Stock    : {winner.ticker} ({winner.company_name})")
+        print(f"Price    : Rs{winner.current_price_inr}")
+        print(f"F-Score  : {winner.f_score}/9")
+        print(f"Momentum : {mom_str}  (12-1 month, price)")
+        print(f"Trend    : Above 200-Day Moving Average")
+        print(f"Quantity : {winner.quantity} shares")
+        print(f"Amount   : Rs{winner.investment_inr}")
+        print(f"Mkt Cap  : Rs{winner.market_cap_cr} Cr" if winner.market_cap_cr else "Mkt Cap  : N/A")
+        print(f"ROE      : {winner.roe_pct}%" if winner.roe_pct else "ROE      : N/A")
+        print(f"D/E      : {winner.debt_to_equity}" if winner.debt_to_equity is not None else "D/E      : N/A")
+        print(f"P/E      : {winner.pe_ratio}" if winner.pe_ratio else "P/E      : N/A")
+        print(f"P/B      : {winner.pb_ratio}" if winner.pb_ratio else "P/B      : N/A")
+        print(f"Criteria : {winner.note}")
     else:
-        print("No winner found.")
-    
-    print("="*60)
-    
+        print("No winner -- no stocks passed all three stages.")
+        print(f"Try lowering MIN_FSCORE (currently {MIN_FSCORE}) or check data availability.")
+
+    print("=" * 60)
+
     write_csv(csv_path, winner)
     return 0
 

@@ -1,2 +1,2 @@
-date,ticker,company_name,current_price_inr,f_score,quantity,investment_inr,market_cap_cr,roe_pct,debt_to_equity,pe_ratio,pb_ratio,note
-2026-05-23,HINDUNILVR,Hindustan Unilever Limited,2203.6,7,2,4407.2,517755.95,21.6,0.03,48.78,10.63,F-Score: 7/9 | ROA: No | OCF: Yes | Low Debt: Yes
+date,ticker,company_name,current_price_inr,f_score,quantity,investment_inr,market_cap_cr,roe_pct,debt_to_equity,pe_ratio,pb_ratio,momentum_12_1_pct,above_200dma,note
+2026-05-24,HINDCOPPER,Hindustan Copper Limited,547.0,9,9,4923.0,52896.21,30.6,0.03,57.58,15.84,145.82,True,F:9/9 Trend:Above200DMA Mom:+145.8% | ROA:Y OCF:Y ROAimprv:Y Accrual:Y DEdown:Y CRup:Y NoDilut:Y GMup:Y ATup:Y
