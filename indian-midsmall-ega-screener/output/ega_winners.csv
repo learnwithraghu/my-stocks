@@ -1,0 +1,3 @@
+date,ticker,company_name,current_price_inr,quantity,investment_inr,earnings_growth_pct,revenue_growth_pct,gap_to_52wh_pct,momentum_5d_pct,rsi_14,ega_score,pe_ratio,market_cap_cr,note
+2026-05-24,HONASA,Honasa Consumer Limited,379.9,13,4938.7,94.9,16.2,5.69,8.57,77.48,45.009,62.18,12365.12,EarnGrowth:+94.9% RevGrowth:+16.2% | 52wh_gap:5.7% 5dMom:+8.6% RSI:77 | EGAscore:45.01
+2026-05-24,IOLCP,IOL Chemicals and Pharmaceuticals Limited,118.21,42,4964.82,69.7,17.7,6.72,12.07,76.9,35.949,29.93,3469.79,EarnGrowth:+69.7% RevGrowth:+17.7% | 52wh_gap:6.7% 5dMom:+12.1% RSI:77 | EGAscore:35.95
