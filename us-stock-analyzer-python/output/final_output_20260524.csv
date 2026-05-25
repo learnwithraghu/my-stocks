@@ -1,2 +1,0 @@
-ticker,todays_last_price_inr,price_as_of,last_eod_close_inr,tomorrow_buy_trigger_inr,profit_target_inr,qty,amount_inr,note
-MRK,122.41,2026-05-24,122.41,122.41,146.89,0.163385,20.0,TCB: range 4.7% over 15d | breakout +5.5% above range | vol 1.7x avg | score 9.59

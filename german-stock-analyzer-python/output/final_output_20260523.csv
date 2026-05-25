@@ -1,4 +1,0 @@
-ticker,todays_last_price_inr,price_as_of,last_eod_close_inr,tomorrow_buy_trigger_inr,profit_target_inr,qty,amount_inr,note
-IFX,85.2,2026-05-23,85.2,85.2,87.88,0.586854,50.0,Passes all recommendation gates; trigger raised to app safety (> 73.41)
-PUM,33.4,2026-05-23,33.4,33.4,34.45,1.497006,50.0,Passes all recommendation gates; trigger raised to app safety (> 28.77)
-DHL,57.89,2026-05-23,57.89,57.89,59.71,0.863707,50.0,Passes all recommendation gates

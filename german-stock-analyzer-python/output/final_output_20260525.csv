@@ -1,0 +1,3 @@
+ticker,todays_last_price_inr,price_as_of,last_eod_close_inr,tomorrow_buy_trigger_inr,profit_target_inr,qty,amount_inr,note
+CBK,43.46,2026-05-25,43.46,43.46,44.82,1.150483,50.0,Passes all recommendation gates
+ALV,455.36,2026-05-25,455.36,455.36,469.66,0.109803,50.0,Passes all recommendation gates; trigger raised to app safety (> 390.99)
