@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Google Sheets Uploader — appends daily screener results to a shared spreadsheet.
-One sheet per strategy; each run adds a new row with the date and results.
+Google Sheets Uploader — writes daily screener results to a shared spreadsheet.
+One sheet per strategy. Re-running the same date replaces existing rows (one batch per date).
 """
 
 from __future__ import annotations
@@ -61,6 +61,16 @@ def get_date_str() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d")
 
 
+def normalize_date(value: str) -> str:
+    """Normalize to YYYY-MM-DD for row matching."""
+    s = str(value).strip()
+    if not s:
+        return ""
+    if len(s) == 8 and s.isdigit():
+        return f"{s[:4]}-{s[4:6]}-{s[6:8]}"
+    return s[:10]
+
+
 def get_creds() -> Credentials:
     creds_json = os.environ.get("GOOGLE_SHEETS_CREDENTIALS")
     if not creds_json:
@@ -84,20 +94,6 @@ def get_or_create_sheet(spreadsheet, sheet_name: str) -> gspread.Worksheet:
     return worksheet
 
 
-def ensure_header(worksheet: gspread.Worksheet, headers: list[str]) -> None:
-    existing = worksheet.row_values(1)
-    if not existing or existing == [""]:
-        worksheet.insert_row(headers, index=1)
-    else:
-        current_headers = existing
-        for i, h in enumerate(headers):
-            if h not in current_headers:
-                current_headers.append(h)
-        if current_headers != existing:
-            worksheet.resize(rows=1, cols=len(current_headers))
-            worksheet.insert_row(current_headers, index=1)
-
-
 def read_csv_safe(csv_path: Path) -> pd.DataFrame | None:
     if not csv_path.exists():
         print(f"  [warn] CSV not found: {csv_path}")
@@ -110,7 +106,73 @@ def read_csv_safe(csv_path: Path) -> pd.DataFrame | None:
         return None
 
 
-def append_to_sheet(
+def prepare_dataframe(df: pd.DataFrame, strategy: dict, run_date: str) -> pd.DataFrame:
+    df = df.copy()
+    if strategy.get("has_date_column") and strategy.get("date_column") not in df.columns:
+        df[strategy["date_column"]] = run_date
+    elif not strategy.get("has_date_column"):
+        if "price_as_of" in df.columns:
+            df["date"] = df["price_as_of"].iloc[0] if len(df) > 0 else run_date
+        else:
+            df["date"] = run_date
+    return df
+
+
+def ensure_headers(worksheet: gspread.Worksheet, df: pd.DataFrame) -> list[str]:
+    existing = worksheet.row_values(1) if worksheet.row_count > 0 else []
+    if not existing or existing == [""]:
+        headers = list(df.columns)
+        worksheet.resize(rows=1, cols=len(headers))
+        worksheet.insert_row(headers, index=1)
+        return headers
+
+    headers = existing
+    for col in df.columns:
+        if col not in headers:
+            headers.append(col)
+    if len(headers) > worksheet.col_count:
+        worksheet.resize(rows=worksheet.row_count, cols=len(headers))
+    if headers != existing:
+        worksheet.update(range_name="A1", values=[headers])
+    return headers
+
+
+def find_date_column_index(headers: list[str]) -> int | None:
+    for name in ("date", "price_as_of"):
+        if name in headers:
+            return headers.index(name)
+    return None
+
+
+def delete_rows_for_date(worksheet: gspread.Worksheet, batch_date: str) -> int:
+    """Remove existing rows matching batch_date (1-based sheet rows, header is row 1)."""
+    values = worksheet.get_all_values()
+    if len(values) < 2:
+        return 0
+
+    headers = values[0]
+    date_idx = find_date_column_index(headers)
+    if date_idx is None:
+        return 0
+
+    rows_to_delete: list[int] = []
+    for row_num, row in enumerate(values[1:], start=2):
+        if len(row) <= date_idx:
+            continue
+        if normalize_date(row[date_idx]) == batch_date:
+            rows_to_delete.append(row_num)
+
+    for row_num in sorted(rows_to_delete, reverse=True):
+        worksheet.delete_rows(row_num)
+
+    return len(rows_to_delete)
+
+
+def row_to_values(row: pd.Series, headers: list[str]) -> list[str]:
+    return [str(row.get(h, "")) if h in row.index else "" for h in headers]
+
+
+def upsert_to_sheet(
     gc: gspread.Client,
     sheet_id: str,
     strategy: dict,
@@ -124,34 +186,21 @@ def append_to_sheet(
     worksheet = get_or_create_sheet(spreadsheet, sheet_name)
 
     if df is None or df.empty:
-        print(f"  {sheet_name}: No data to append")
+        print(f"  {sheet_name}: No data to upload")
         return
 
-    if strategy.get("has_date_column") and strategy.get("date_column") not in df.columns:
-        df[strategy["date_column"]] = run_date
-    elif not strategy.get("has_date_column"):
-        if "price_as_of" in df.columns:
-            df["date"] = df["price_as_of"].iloc[0] if len(df) > 0 else run_date
-        else:
-            df["date"] = run_date
+    df = prepare_dataframe(df, strategy, run_date)
+    batch_date = normalize_date(str(df["date"].iloc[0]))
 
-    headers = worksheet.row_values(1) if worksheet.row_count > 0 else []
-    if not headers or headers == [""]:
-        headers = list(df.columns)
-        worksheet.resize(rows=1, cols=len(headers))
-        worksheet.insert_row(headers, index=1)
+    headers = ensure_headers(worksheet, df)
+    removed = delete_rows_for_date(worksheet, batch_date)
 
-    all_headers = headers + [h for h in df.columns if h not in headers]
-    if len(all_headers) > worksheet.col_count:
-        worksheet.resize(rows=worksheet.row_count, cols=len(all_headers))
+    rows = [row_to_values(row, headers) for _, row in df.iterrows()]
+    if rows:
+        worksheet.append_rows(rows, value_input_option="USER_ENTERED")
 
-    for _, row in df.iterrows():
-        row_data = []
-        for h in all_headers:
-            row_data.append(str(row.get(h, "")) if h in row.index else "")
-        worksheet.append_row(row_data, value_input_option="USER_ENTERED")
-
-    print(f"  {sheet_name}: Appended {len(df)} row(s)")
+    action = "Replaced" if removed else "Wrote"
+    print(f"  {sheet_name}: {action} {len(rows)} row(s) for {batch_date} (removed {removed} old)")
 
 
 def create_spreadsheet_if_needed(gc: gspread.Client, sheet_id: str) -> gspread.Spreadsheet:
@@ -175,7 +224,7 @@ def main() -> int:
         return 1
 
     try:
-        spreadsheet = create_spreadsheet_if_needed(gc, sheet_id)
+        create_spreadsheet_if_needed(gc, sheet_id)
     except gspread.exceptions.SpreadsheetNotFound:
         return 1
 
@@ -184,7 +233,7 @@ def main() -> int:
 
     for strategy in SHEET_STRATEGIES:
         try:
-            append_to_sheet(gc, sheet_id, strategy, run_date)
+            upsert_to_sheet(gc, sheet_id, strategy, run_date)
         except Exception as e:
             print(f"  [error] Failed to upload {strategy['name']}: {e}", file=sys.stderr)
             continue

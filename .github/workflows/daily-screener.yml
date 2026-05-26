@@ -6,14 +6,13 @@ on:
   workflow_dispatch:
     inputs:
       run_mode:
-        description: "full = all screeners; etf-only = Indian ETF only; upload-test = fixtures + Sheets upload"
+        description: "full = all screeners; etf-only = Indian ETF screener only"
         required: true
-        default: upload-test
+        default: full
         type: choice
         options:
-          - upload-test
-          - etf-only
           - full
+          - etf-only
 
 jobs:
   screener:
@@ -33,18 +32,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools
           pip install -r requirements-google-sheets.txt
-          if [ "${{ github.event.inputs.run_mode || 'full' }}" != "upload-test" ]; then
-            pip install -r indian-etf-analyzer-python/requirements.txt
-            pip install -r indian-nifty100-analyzer-python/requirements.txt
-          fi
+          pip install -r indian-etf-analyzer-python/requirements.txt
+          pip install -r indian-nifty100-analyzer-python/requirements.txt
 
       - name: Verify Google Sheets dependencies
         run: |
           python -c "from google.oauth2.service_account import Credentials; import gspread; print('google sheets deps ok')"
-
-      - name: Prepare upload test fixtures
-        if: ${{ (github.event.inputs.run_mode || 'full') == 'upload-test' }}
-        run: python scripts/prepare_upload_test_fixtures.py
 
       - name: Run Indian ETF Analyzer
         if: ${{ contains(fromJSON('["full","etf-only"]'), github.event.inputs.run_mode || 'full') }}
