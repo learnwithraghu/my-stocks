@@ -1,0 +1,72 @@
+name: Daily Stock Screener - Google Sheets Update
+
+on:
+  schedule:
+    - cron: "0 15 * * *"
+  workflow_dispatch:
+
+jobs:
+  screener:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r indian-etf-analyzer-python/requirements.txt
+          pip install -r indian-nifty100-analyzer-python/requirements.txt
+          pip install -r us-stock-analyzer-python/requirements.txt
+          pip install -r german-stock-analyzer-python/requirements.txt
+          pip install gspread google-auth
+
+      - name: Run Indian ETF Analyzer
+        run: python indian-etf-analyzer-python/analyze_etfs.py
+        continue-on-error: true
+
+      - name: Run Nifty 100 Turtle + DM
+        run: python indian-nifty100-analyzer-python/analyze_stocks.py
+        continue-on-error: true
+
+      - name: Run US Stocks TCB
+        run: python us-stock-analyzer-python/analyze_stocks.py
+        continue-on-error: true
+
+      - name: Run German Stocks
+        run: python german-stock-analyzer-python/analyze_stocks.py
+        continue-on-error: true
+
+      - name: Run Nifty 200 Piotroski
+        run: python indian-nifty200-piotroski/analyze_piotroski.py
+        continue-on-error: true
+
+      - name: Run MidSmall EGA Screener
+        run: python indian-midsmall-ega-screener/analyze_stocks.py
+        continue-on-error: true
+
+      - name: Upload to Google Sheets
+        env:
+          GOOGLE_SHEETS_CREDENTIALS: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+        run: python google_sheets_uploader.py
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screener-outputs
+          path: |
+            indian-etf-analyzer-python/output/*.csv
+            indian-nifty100-analyzer-python/output/*.csv
+            us-stock-analyzer-python/output/*.csv
+            german-stock-analyzer-python/output/*.csv
+            indian-nifty200-piotroski/output/*.csv
+            indian-midsmall-ega-screener/output/*.csv
+          retention-days: 7
