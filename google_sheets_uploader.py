@@ -29,16 +29,6 @@ SHEET_STRATEGIES = [
         "has_date_column": False,
     },
     {
-        "name": "us_stocks",
-        "csv_path": "us-stock-analyzer-python/output/final_output_{date}.csv",
-        "has_date_column": False,
-    },
-    {
-        "name": "german_stocks",
-        "csv_path": "german-stock-analyzer-python/output/final_output_{date}.csv",
-        "has_date_column": False,
-    },
-    {
         "name": "piotroski",
         "csv_path": "indian-nifty200-piotroski/output/piotroski_winner.csv",
         "has_date_column": True,
@@ -115,21 +105,38 @@ def prepare_dataframe(df: pd.DataFrame, strategy: dict, run_date: str) -> pd.Dat
             df["date"] = df["price_as_of"].iloc[0] if len(df) > 0 else run_date
         else:
             df["date"] = run_date
-    return df
+    return order_columns(df)
+
+
+def order_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Put date in the first column for every strategy."""
+    if "date" not in df.columns:
+        return df
+    cols = ["date", *[c for c in df.columns if c != "date"]]
+    return df[cols]
+
+
+def canonical_headers(df: pd.DataFrame, existing: list[str]) -> list[str]:
+    """Date first, then CSV columns, then any legacy sheet columns."""
+    headers: list[str] = []
+    for col in order_columns(df).columns:
+        if col not in headers:
+            headers.append(col)
+    for col in existing:
+        if col and col not in headers:
+            headers.append(col)
+    return headers
 
 
 def ensure_headers(worksheet: gspread.Worksheet, df: pd.DataFrame) -> list[str]:
     existing = worksheet.row_values(1) if worksheet.row_count > 0 else []
+    headers = canonical_headers(df, existing if existing and existing != [""] else [])
+
     if not existing or existing == [""]:
-        headers = list(df.columns)
         worksheet.resize(rows=1, cols=len(headers))
         worksheet.insert_row(headers, index=1)
         return headers
 
-    headers = existing
-    for col in df.columns:
-        if col not in headers:
-            headers.append(col)
     if len(headers) > worksheet.col_count:
         worksheet.resize(rows=worksheet.row_count, cols=len(headers))
     if headers != existing:
