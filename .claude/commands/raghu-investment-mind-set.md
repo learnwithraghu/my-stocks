@@ -33,7 +33,6 @@ Traditional methods (Piotroski, Turtle, Momentum) are widely known. Edge comes f
 
 ### Output size
 - Indian markets: **1 winner** (Piotroski screener) or **2 winners** (EGA screener)
-- US / German markets: **top 2 picks maximum**
 - Never output a long list. High conviction, low count.
 
 ---
@@ -43,11 +42,7 @@ Traditional methods (Piotroski, Turtle, Momentum) are widely known. Edge comes f
 | Market | Budget per trade | Transaction fee | Profit target | Shares |
 |--------|-----------------|-----------------|---------------|--------|
 | Indian (Nifty) | Rs 5,000 | none assumed | varies | Whole shares only |
-| US stocks | $20 USD | $1 buy fee → target must net $3 minimum → need 20%+ gain | +20% | Fractional (6 decimal places) |
-| German stocks | $50 USD | fractional | +3.14% | Fractional |
 | Indian ETF | Rs 5,000 | none assumed | varies | Whole shares |
-
-**Critical for US trades:** With $20 investment + $1 fee, the stock must move **at least 20%** to net $3. Never set a profit target below 20% for US. Never invest more than $20 per trade.
 
 ---
 
@@ -73,7 +68,6 @@ These have already been implemented. Do not propose them as new:
 | 200-Day MA Pre-filter | Nifty 200 Piotroski (Stage 1) | Winton / universal |
 | Earnings Growth Acceleration (EGA) | Midcap+Smallcap screener (Stage 2) | Coatue / Goldman Sachs QIS 2023 |
 | 52-Week High Proximity Momentum | Midcap+Smallcap screener (Stage 1) | Robeco 2022 |
-| Tight Consolidation Breakout (TCB) | US screener | Coatue / Two Sigma 2021-2023 |
 
 ---
 
@@ -109,12 +103,10 @@ Before accepting a method as valid for the "new" slot, verify all:
 | `indian-nifty100-analyzer-python` | Turtle Trading + Dual Momentum | — (upgrade candidate) | All passers |
 | `indian-nifty200-piotroski` | Piotroski F-Score | 200 DMA pre-filter, 12-1M Momentum | 1 winner |
 | `indian-midsmall-ega-screener` | RSI + Volume confirmation | EGA (Coatue/GS 2023), 52-Week High Proximity (Robeco 2022) | 2 winners |
-| `us-stock-analyzer-python` | — | Tight Consolidation Breakout (Coatue/Two Sigma) | Top 2 |
-| `german-stock-analyzer-python` | Turtle Trading + Dual Momentum | — (upgrade candidate) | All passers |
 | `indian-etf-analyzer-python` | Turtle (20-day) + Dual Momentum | — (upgrade candidate) | All passers |
 
 ---
 
 ## Raghu's Style in One Paragraph
 
-Raghu is a systematic investor who runs automated daily screeners across Indian, US, and German markets. He favors quantitative funnel approaches — stacking 2-3 independent signals — over single-indicator systems. He insists on at least one method that reflects post-2021 institutional thinking so his edge does not come from widely-known, easily-arbitraged factors alone. He trades with fixed small budgets ($20 US, Rs 5000 India) and needs methods that generate high-conviction, short-to-medium-term moves. He prefers 1-2 high-quality picks over a long list of mediocre ones. He has validated that tight pre-filters (200 DMA, 52-week high proximity, consolidation range) dramatically improve signal quality by eliminating structurally broken stocks before expensive fundamental checks run.
+Raghu is a systematic investor who runs automated daily screeners across Indian markets. He favors quantitative funnel approaches — stacking 2-3 independent signals — over single-indicator systems. He insists on at least one method that reflects post-2021 institutional thinking so his edge does not come from widely-known, easily-arbitraged factors alone. He trades with fixed small budgets (Rs 5000 per pick) and needs methods that generate high-conviction, short-to-medium-term moves. He prefers 1-2 high-quality picks over a long list of mediocre ones. He has validated that tight pre-filters (200 DMA, 52-week high proximity, consolidation range) dramatically improve signal quality by eliminating structurally broken stocks before expensive fundamental checks run.

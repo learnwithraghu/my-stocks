@@ -23,8 +23,6 @@ jobs:
         run: |
           pip install -r indian-etf-analyzer-python/requirements.txt
           pip install -r indian-nifty100-analyzer-python/requirements.txt
-          pip install -r us-stock-analyzer-python/requirements.txt
-          pip install -r german-stock-analyzer-python/requirements.txt
           pip install gspread google-auth
 
       - name: Run Indian ETF Analyzer
@@ -33,14 +31,6 @@ jobs:
 
       - name: Run Nifty 100 Turtle + DM
         run: python indian-nifty100-analyzer-python/analyze_stocks.py
-        continue-on-error: true
-
-      - name: Run US Stocks TCB
-        run: python us-stock-analyzer-python/analyze_stocks.py
-        continue-on-error: true
-
-      - name: Run German Stocks
-        run: python german-stock-analyzer-python/analyze_stocks.py
         continue-on-error: true
 
       - name: Run Nifty 200 Piotroski
@@ -65,8 +55,6 @@ jobs:
           path: |
             indian-etf-analyzer-python/output/*.csv
             indian-nifty100-analyzer-python/output/*.csv
-            us-stock-analyzer-python/output/*.csv
-            german-stock-analyzer-python/output/*.csv
             indian-nifty200-piotroski/output/*.csv
             indian-midsmall-ega-screener/output/*.csv
           retention-days: 7

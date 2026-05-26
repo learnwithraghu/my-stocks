@@ -4,7 +4,7 @@ Stock and ETF screening with **Turtle trading** + **dual momentum**, local Pytho
 
 ## How we pick stocks — 7 steps
 
-Every stock screener (Nifty 100, US, German) follows the same pipeline. **All gates must pass** — one failure and the symbol is skipped.
+Every Turtle + Dual Momentum stock screener (e.g. Nifty 100) follows the same pipeline. **All gates must pass** — one failure and the symbol is skipped.
 
 ### Step 1 — Start with a fixed universe
 
@@ -13,8 +13,6 @@ We do not scan the whole market. Each project has a predefined list:
 | Project | Universe | Benchmark (for relative strength) |
 |---------|----------|----------------------------------|
 | Nifty 100 | 100 NSE large-caps | NIFTYBEES |
-| US stocks | ~96 S&P-style names | SPY |
-| German stocks | Top 50 DAX + MDAX | EXS1 (DAX ETF) |
 
 The Indian **ETF** analyzer uses the same momentum idea but a smaller ETF list and a lighter Turtle rule (20-day exit only, no 55-day breakout).
 
@@ -40,7 +38,7 @@ Dual momentum combines **absolute** and **relative** strength:
 | Gate | Rule |
 |------|------|
 | **Absolute momentum** | 12-month return (252 trading days) **> 0%** — only assets going up over the year |
-| **Relative momentum** | 3-month return (63 days) **beats the benchmark's** 3-month return (e.g. stock beats SPY) |
+| **Relative momentum** | 3-month return (63 days) **beats the benchmark's** 3-month return (e.g. stock beats NIFTYBEES) |
 
 A symbol must be winning on its own *and* beating the market proxy.
 
@@ -61,12 +59,11 @@ Every symbol that passed Steps 3–5 gets a **momentum score**:
 score = 0.4 × 12M return + 0.3 × 6M return + 0.2 × 3M return + 0.1 × 1M return
 ```
 
-We sort by score (highest first). **US and German** screeners list **every symbol that passes** all gates (no share-price cap — fractional shares OK). **Nifty 100** keeps up to 20 whole-share slots:
+We sort by score (highest first). **Nifty 100** keeps up to 20 whole-share slots:
 
 | Project | Budget per row | Output |
 |---------|----------------|--------|
 | Nifty 100 | ₹15,000 each (up to 20 slots) | Whole shares |
-| US / German | $50 fractional per row | All gate passers |
 
 ### Step 7 — Set tomorrow's buy order
 
@@ -75,13 +72,13 @@ For each final pick we compute:
 1. **Buy trigger (LIMIT price)**  
    - If 1-month return ≥ 3-month return → trigger = live price  
    - Else → trigger = live price × 0.998 (slightly below, for a pullback entry)  
-   - Then raise trigger if needed for **app safety**: must be above `(last EOD close − ₹0.06) + ₹0.01` on NSE, or `(EOD − $0.01) + $0.01` on US/German
+   - Then raise trigger if needed for **app safety**: must be above `(last EOD close − ₹0.06) + ₹0.01` on NSE
 
 2. **Profit target** = trigger × **1.0314** (+3.14%)
 
-3. **Quantity** — Nifty 100 / India ETF: `max(1, floor(trade_size ÷ trigger))` whole shares. **US / German:** fractional `qty = $50 ÷ trigger` (any share price OK).
+3. **Quantity** — Nifty 100 / India ETF: `max(1, floor(trade_size ÷ trigger))` whole shares.
 
-4. **Amount** = qty × trigger (≈ $50 for US/German rows; within budget for India)
+4. **Amount** = qty × trigger (within budget for India)
 
 Output lands in `output/final_output_YYYYMMDD.csv`. If **no symbol passes all gates**, the CSV has one row: `No stocks to recommend at this time`.
 
@@ -93,8 +90,6 @@ Output lands in `output/final_output_YYYYMMDD.csv`. If **no symbol passes all ga
 |------|-------------|
 | [`indian-etf-analyzer-python/`](indian-etf-analyzer-python/) | 25 Indian ETFs → `final_output_YYYYMMDD.csv` |
 | [`indian-nifty100-analyzer-python/`](indian-nifty100-analyzer-python/) | Nifty 100 stocks, Turtle + Dual Momentum |
-| [`us-stock-analyzer-python/`](us-stock-analyzer-python/) | US large-cap stocks, **$50 fractional** per pick |
-| [`german-stock-analyzer-python/`](german-stock-analyzer-python/) | Top 50 German stocks, **$50 fractional USD** per pick |
 | [`indian-nifty200-piotroski/`](indian-nifty200-piotroski/) | Nifty 200 stocks, Piotroski F-Score (1 winner, ₹5000 investment) |
 | [`indian-midsmall-ega-screener/`](indian-midsmall-ega-screener/) | Nifty Midcap + Smallcap, Earnings Growth Acceleration (2 winners, ₹5000 each) |
 | [`.agent/turtle-dual-momentum/`](.agent/turtle-dual-momentum/) | Agent skill + generic `run_screener.py` for any universe |
@@ -117,8 +112,6 @@ source venv/bin/activate
 # Run all analyzers in one command
 python3 indian-etf-analyzer-python/analyze_etfs.py && \
 python3 indian-nifty100-analyzer-python/analyze_stocks.py && \
-python3 us-stock-analyzer-python/analyze_stocks.py && \
-python3 german-stock-analyzer-python/analyze_stocks.py && \
 python3 indian-nifty200-piotroski/analyze_piotroski.py && \
 python3 indian-midsmall-ega-screener/analyze_stocks.py
 ```
@@ -132,14 +125,6 @@ python3 analyze_etfs.py
 
 # Nifty 100 Turtle + Dual Momentum
 cd ../indian-nifty100-analyzer-python
-python3 analyze_stocks.py
-
-# US Stocks ($50 fractional)
-cd ../us-stock-analyzer-python
-python3 analyze_stocks.py
-
-# German Stocks ($50 fractional USD)
-cd ../german-stock-analyzer-python
 python3 analyze_stocks.py
 
 # Nifty 200 Piotroski F-Score (1 winner, ₹5000 investment)
