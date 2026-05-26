@@ -92,6 +92,7 @@ Output lands in `output/final_output_YYYYMMDD.csv`. If **no symbol passes all ga
 | [`indian-nifty100-analyzer-python/`](indian-nifty100-analyzer-python/) | Nifty 100 stocks, Turtle + Dual Momentum |
 | [`indian-nifty200-piotroski/`](indian-nifty200-piotroski/) | Nifty 200 stocks, Piotroski F-Score (1 winner, ₹5000 investment) |
 | [`indian-midsmall-ega-screener/`](indian-midsmall-ega-screener/) | Nifty Midcap + Smallcap, Earnings Growth Acceleration (2 winners, ₹5000 each) |
+| [`indian-midcap-pead-screener/`](indian-midcap-pead-screener/) | Nifty Midcap 100, PEAD + 200 DMA (1 winner, ₹10000) |
 | [`.agent/turtle-dual-momentum/`](.agent/turtle-dual-momentum/) | Agent skill + generic `run_screener.py` for any universe |
 
 ## Quick start
@@ -113,7 +114,8 @@ source venv/bin/activate
 python3 indian-etf-analyzer-python/analyze_etfs.py && \
 python3 indian-nifty100-analyzer-python/analyze_stocks.py && \
 python3 indian-nifty200-piotroski/analyze_piotroski.py && \
-python3 indian-midsmall-ega-screener/analyze_stocks.py
+python3 indian-midsmall-ega-screener/analyze_stocks.py && \
+python3 indian-midcap-pead-screener/analyze_pead.py
 ```
 
 ### 3. Run individual screeners
@@ -134,6 +136,10 @@ python3 analyze_piotroski.py
 # Nifty Midcap + Smallcap EGA (2 winners, ₹5000 per stock)
 cd ../indian-midsmall-ega-screener
 python3 analyze_stocks.py
+
+# Nifty Midcap 100 PEAD (1 winner, ₹10000)
+cd ../indian-midcap-pead-screener
+python3 analyze_pead.py
 ```
 
 See each folder's README for config (budget ₹3L, ₹15K/trade, 3.14% profit target).

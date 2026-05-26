@@ -59,6 +59,11 @@ jobs:
         run: python indian-midsmall-ega-screener/analyze_stocks.py
         continue-on-error: true
 
+      - name: Run Midcap PEAD Screener
+        if: ${{ (github.event.inputs.run_mode || 'full') == 'full' }}
+        run: python indian-midcap-pead-screener/analyze_pead.py
+        continue-on-error: true
+
       - name: Upload to Google Sheets
         env:
           GOOGLE_SHEETS_CREDENTIALS: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}
@@ -75,4 +80,5 @@ jobs:
             indian-nifty100-analyzer-python/output/*.csv
             indian-nifty200-piotroski/output/*.csv
             indian-midsmall-ega-screener/output/*.csv
+            indian-midcap-pead-screener/output/*.csv
           retention-days: 7

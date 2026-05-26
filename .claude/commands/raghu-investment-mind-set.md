@@ -42,6 +42,7 @@ Traditional methods (Piotroski, Turtle, Momentum) are widely known. Edge comes f
 | Market | Budget per trade | Transaction fee | Profit target | Shares |
 |--------|-----------------|-----------------|---------------|--------|
 | Indian (Nifty) | Rs 5,000 | none assumed | varies | Whole shares only |
+| Indian Midcap PEAD | Rs 10,000 | none assumed | varies | Whole shares only |
 | Indian ETF | Rs 5,000 | none assumed | varies | Whole shares |
 
 ---
@@ -68,6 +69,7 @@ These have already been implemented. Do not propose them as new:
 | 200-Day MA Pre-filter | Nifty 200 Piotroski (Stage 1) | Winton / universal |
 | Earnings Growth Acceleration (EGA) | Midcap+Smallcap screener (Stage 2) | Coatue / Goldman Sachs QIS 2023 |
 | 52-Week High Proximity Momentum | Midcap+Smallcap screener (Stage 1) | Robeco 2022 |
+| Post-Earnings Announcement Drift (PEAD) | Midcap PEAD screener (Stage 2) | Goldman Sachs QIS 2022, AQR |
 
 ---
 
@@ -80,7 +82,6 @@ When proposing a new screener, prefer from this pool first:
 | Short Interest as Value Trap Filter | D.E. Shaw, Two Sigma, Citadel (post-2021) | Quality confirmation; pair with Piotroski |
 | Earnings Revision Score (ERS) | Goldman Sachs QIS 2021-2023, Nomura QIS | Forward-looking; pair with price momentum |
 | Quality × Momentum Interaction Weighting | AQR 2022-2023, BlackRock SAE | Upgrading existing momentum scoring |
-| Post-Earnings Announcement Drift (PEAD) | Goldman Sachs QIS 2022, AQR | 2-6 week hold after earnings surprise |
 | ADX Trend Strength Filter | Man AHL, Winton Capital 2021-2023 | Replaces simple MA-above check |
 | Mispricing Composite Score | BlackRock Systematic Equity 2022 | Multi-factor composite for ranking |
 
@@ -103,10 +104,11 @@ Before accepting a method as valid for the "new" slot, verify all:
 | `indian-nifty100-analyzer-python` | Turtle Trading + Dual Momentum | — (upgrade candidate) | All passers |
 | `indian-nifty200-piotroski` | Piotroski F-Score | 200 DMA pre-filter, 12-1M Momentum | 1 winner |
 | `indian-midsmall-ega-screener` | RSI + Volume confirmation | EGA (Coatue/GS 2023), 52-Week High Proximity (Robeco 2022) | 2 winners |
+| `indian-midcap-pead-screener` | 200 DMA + RSI + Volume | PEAD (GS QIS 2022 / AQR), 12-1M Momentum | 1 winner |
 | `indian-etf-analyzer-python` | Turtle (20-day) + Dual Momentum | — (upgrade candidate) | All passers |
 
 ---
 
 ## Raghu's Style in One Paragraph
 
-Raghu is a systematic investor who runs automated daily screeners across Indian markets. He favors quantitative funnel approaches — stacking 2-3 independent signals — over single-indicator systems. He insists on at least one method that reflects post-2021 institutional thinking so his edge does not come from widely-known, easily-arbitraged factors alone. He trades with fixed small budgets (Rs 5000 per pick) and needs methods that generate high-conviction, short-to-medium-term moves. He prefers 1-2 high-quality picks over a long list of mediocre ones. He has validated that tight pre-filters (200 DMA, 52-week high proximity, consolidation range) dramatically improve signal quality by eliminating structurally broken stocks before expensive fundamental checks run.
+Raghu is a systematic investor who runs automated daily screeners across Indian markets. He favors quantitative funnel approaches — stacking 2-3 independent signals — over single-indicator systems. He insists on at least one method that reflects post-2021 institutional thinking so his edge does not come from widely-known, easily-arbitraged factors alone. He trades with fixed small budgets (Rs 5000–10000 per pick) and needs methods that generate high-conviction, short-to-medium-term moves. He prefers 1-2 high-quality picks over a long list of mediocre ones. He has validated that tight pre-filters (200 DMA, 52-week high proximity, consolidation range) dramatically improve signal quality by eliminating structurally broken stocks before expensive fundamental checks run.

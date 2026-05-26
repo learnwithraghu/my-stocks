@@ -40,6 +40,12 @@ SHEET_STRATEGIES = [
         "has_date_column": True,
         "date_column": "date",
     },
+    {
+        "name": "nifty_midcap_PEAD_10k",
+        "csv_path": "indian-midcap-pead-screener/output/midcap_winner.csv",
+        "has_date_column": True,
+        "date_column": "date",
+    },
 ]
 
 SCOPES = [
