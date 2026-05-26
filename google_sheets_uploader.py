@@ -15,7 +15,7 @@ from pathlib import Path
 import gspread
 import pandas as pd
 from google.auth import exceptions as google_exceptions
-from google.auth.service_account import Credentials
+from google.oauth2.service_account import Credentials
 
 SHEET_STRATEGIES = [
     {
