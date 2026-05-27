@@ -59,11 +59,11 @@ Every symbol that passed Steps 3–5 gets a **momentum score**:
 score = 0.4 × 12M return + 0.3 × 6M return + 0.2 × 3M return + 0.1 × 1M return
 ```
 
-We sort by score (highest first). **Nifty 100** keeps up to 20 whole-share slots:
+We sort by score (highest first). **Nifty 100** and **Indian ETF** keep **top 2** whole-share picks (₹15,000 each):
 
 | Project | Budget per row | Output |
 |---------|----------------|--------|
-| Nifty 100 | ₹15,000 each (up to 20 slots) | Whole shares |
+| Nifty 100 / Indian ETF | ₹15,000 each (max 2 picks) | Whole shares |
 
 ### Step 7 — Set tomorrow's buy order
 
@@ -88,8 +88,8 @@ Output lands in `output/final_output_YYYYMMDD.csv`. If **no symbol passes all ga
 
 | Path | Description |
 |------|-------------|
-| [`indian-etf-analyzer-python/`](indian-etf-analyzer-python/) | 25 Indian ETFs → `final_output_YYYYMMDD.csv` |
-| [`indian-nifty100-analyzer-python/`](indian-nifty100-analyzer-python/) | Nifty 100 stocks, Turtle + Dual Momentum |
+| [`indian-etf-analyzer-python/`](indian-etf-analyzer-python/) | 25 Indian ETFs, max 2 picks (₹15,000 each) |
+| [`indian-nifty100-analyzer-python/`](indian-nifty100-analyzer-python/) | Nifty 100 stocks, Turtle + Dual Momentum, max 2 picks |
 | [`indian-nifty200-piotroski/`](indian-nifty200-piotroski/) | Nifty 200 stocks, Piotroski F-Score (1 winner, ₹5000 investment) |
 | [`indian-midsmall-ega-screener/`](indian-midsmall-ega-screener/) | Nifty Midcap + Smallcap, Earnings Growth Acceleration (2 winners, ₹5000 each) |
 | [`indian-midcap-pead-screener/`](indian-midcap-pead-screener/) | Nifty Midcap 100, PEAD + 200 DMA (1 winner, ₹10000) |

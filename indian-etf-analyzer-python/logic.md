@@ -4,9 +4,11 @@
 
 Selects from **25 Indian ETFs** using **Turtle Trading + Dual Momentum** framework.
 
-**Investment model:** ₹15,000 per recommendation (max 20 slots, ₹300,000 total budget).
+**Investment model:** ₹15,000 per recommendation (max 2 picks).
 
 **Horizon:** Daily signals (short-term momentum traders).
+
+**52-week high gate:** 4–12% below 52-week high; no fresh 52-week high in the last 10 trading days.
 
 ---
 
@@ -46,6 +48,7 @@ Two sanity checks before the signal is trusted:
 |--------|------|
 | **RSI(14)** | Between 40 and 80 (not oversold, not extremely overbought) |
 | **Volume** | Today's volume ≥ 70% of 20-day average (participation exists) |
+| **52-week sweet spot** | Price 4–12% below 52-week high; 52w high not set in last 10 trading days |
 
 **Why:** Filters out weak signals and low-volume noise.
 
@@ -59,7 +62,7 @@ All ETFs passing Stages 1–3 are ranked by **momentum score**:
 score = 0.4 × 12M return + 0.3 × 6M return + 0.2 × 3M return + 0.1 × 1M return
 ```
 
-**Keep up to 20 slots** (highest momentum scores first).
+**Keep top 2** (highest momentum scores first).
 
 ---
 

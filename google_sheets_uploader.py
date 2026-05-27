@@ -48,6 +48,8 @@ SHEET_STRATEGIES = [
     },
 ]
 
+DEPRECATED_SHEETS = ["us_stocks", "german_stocks"]
+
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
 ]
@@ -80,6 +82,16 @@ def get_creds() -> Credentials:
 def get_gc() -> gspread.Client:
     creds = get_creds()
     return gspread.authorize(creds)
+
+
+def remove_deprecated_sheets(spreadsheet) -> None:
+    for name in DEPRECATED_SHEETS:
+        try:
+            worksheet = spreadsheet.worksheet(name)
+            spreadsheet.del_worksheet(worksheet)
+            print(f"  Removed deprecated sheet: {name}")
+        except gspread.exceptions.WorksheetNotFound:
+            pass
 
 
 def get_or_create_sheet(spreadsheet, sheet_name: str) -> gspread.Worksheet:
@@ -237,9 +249,11 @@ def main() -> int:
         return 1
 
     try:
-        create_spreadsheet_if_needed(gc, sheet_id)
+        spreadsheet = create_spreadsheet_if_needed(gc, sheet_id)
     except gspread.exceptions.SpreadsheetNotFound:
         return 1
+
+    remove_deprecated_sheets(spreadsheet)
 
     run_date = get_date_str()
     print(f"Uploading screener results for {run_date} to Google Sheet: {sheet_id}\n")

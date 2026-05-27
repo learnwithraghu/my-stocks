@@ -17,11 +17,17 @@ import yfinance as yf
 
 from nifty100_universe import NIFTY100_TICKERS
 
+_ROOT = Path(__file__).resolve().parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
+from filters_52w import BAND_TURTLE_DM, passes_52w_sweet_spot
+
 IST = ZoneInfo("Asia/Kolkata")
 BENCHMARK = "NIFTYBEES"
 BUDGET_INR = 300_000
 TRADE_SIZE_INR = 15_000
-MAX_SLOTS = BUDGET_INR // TRADE_SIZE_INR
+MAX_SLOTS = 2
 PROFIT_TARGET_PCT = 3.14
 
 TURTLE_ENTRY_DAYS = 55
@@ -41,6 +47,7 @@ OUTPUT_COLUMNS = [
     "todays_last_price_inr",
     "price_as_of",
     "last_eod_close_inr",
+    "gap_to_52wh_pct",
     "tomorrow_buy_trigger_inr",
     "profit_target_inr",
     "qty",
@@ -61,6 +68,7 @@ class StockPick:
     amount: int
     note: str
     score: float
+    gap_to_52wh_pct: float
 
 
 def yahoo_symbol(ticker: str) -> str:
@@ -167,11 +175,15 @@ def analyze_stock(ticker: str, bench_3m: float | None) -> StockPick | None:
     ):
         return None
 
+    passes_52w, gap_52wh, _ = passes_52w_sweet_spot(df, live, *BAND_TURTLE_DM)
+    if not passes_52w:
+        return None
+
     score = round(r12 * 0.4 + (r6 or 0) * 0.3 + (r3 or 0) * 0.2 + (r1 or 0) * 0.1, 2)
     trig, note = apply_trigger(live, eod, r1, r3)
     target = round(trig * (1 + PROFIT_TARGET_PCT / 100), 2)
     qty, amount = position_size(trig)
-    return StockPick(ticker, live, today, eod, trig, target, qty, amount, note, score)
+    return StockPick(ticker, live, today, eod, trig, target, qty, amount, note, score, gap_52wh)
 
 
 def write_csv(path: Path, picks: list[StockPick]) -> None:
@@ -183,6 +195,7 @@ def write_csv(path: Path, picks: list[StockPick]) -> None:
                 "todays_last_price_inr": p.price,
                 "price_as_of": p.price_as_of,
                 "last_eod_close_inr": p.last_eod,
+                "gap_to_52wh_pct": p.gap_to_52wh_pct,
                 "tomorrow_buy_trigger_inr": p.trigger,
                 "profit_target_inr": p.target,
                 "qty": p.qty,

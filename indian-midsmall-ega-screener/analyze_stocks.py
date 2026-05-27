@@ -27,9 +27,15 @@ import yfinance as yf
 
 from midsmall_universe import MIDSMALL_TICKERS
 
+_ROOT = Path(__file__).resolve().parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
+from filters_52w import BAND_EGA, high_52w_from_history, passes_52w_sweet_spot
+
 IST = ZoneInfo("Asia/Kolkata")
 INVESTMENT_INR = 5000
-MAX_PROXIMITY_GAP = 0.10    # within 10% of 52-week high
+EGA_MIN_GAP_PCT, EGA_MAX_GAP_PCT = BAND_EGA
 MIN_EARNINGS_GROWTH = 0.10  # 10% YoY earnings growth
 MIN_REVENUE_GROWTH = 0.05   # 5% YoY revenue growth
 RSI_MIN = 50
@@ -115,19 +121,14 @@ def passes_proximity_filter(
     if not current_price or current_price <= 0:
         return False, 0.0, 0.0
 
-    high_52w = safe_get(info, ["fiftyTwoWeekHigh"])
-    if not high_52w or high_52w <= 0:
+    if len(hist) < 6:
         return False, 0.0, 0.0
 
-    gap = (high_52w - current_price) / high_52w
-
-    if len(hist) < 6:
-        return False, round(gap * 100, 2), 0.0
-
+    passes_52w, gap_pct, _ = passes_52w_sweet_spot(hist, current_price, *BAND_EGA)
     momentum_5d = round((hist["Close"].iloc[-1] / hist["Close"].iloc[-6] - 1) * 100, 2)
 
-    passes = (gap <= MAX_PROXIMITY_GAP) and (momentum_5d > 0)
-    return passes, round(gap * 100, 2), momentum_5d
+    passes = passes_52w and (momentum_5d > 0)
+    return passes, gap_pct, momentum_5d
 
 
 def check_ega(
@@ -175,8 +176,12 @@ def calculate_ega_score(
     Composite score tuned for 2-3 week trade horizon.
     Proximity and near-term momentum are weighted heavily.
     """
-    # Proximity: 0 when at MAX gap, 100 when at 52-week high
-    proximity_score = max(0.0, (MAX_PROXIMITY_GAP * 100 - gap_pct) / (MAX_PROXIMITY_GAP * 100) * 100)
+    # Proximity: 0 at max gap, 100 at min gap (sweet-spot band)
+    band_width = EGA_MAX_GAP_PCT - EGA_MIN_GAP_PCT
+    proximity_score = max(
+        0.0,
+        (EGA_MAX_GAP_PCT - gap_pct) / band_width * 100 if band_width > 0 else 0.0,
+    )
 
     score = (
         0.30 * min(earnings_growth_pct, 100.0) +   # cap to avoid outlier distortion
@@ -219,6 +224,10 @@ def analyze_stock(
             return None
 
         high_52w = safe_get(info, ["fiftyTwoWeekHigh"])
+        if not high_52w or high_52w <= 0:
+            high_52w = high_52w_from_history(hist)
+        if not high_52w:
+            return None
         gap_pct = round((high_52w - current_price) / high_52w * 100, 2)
         momentum_5d = round((hist["Close"].iloc[-1] / hist["Close"].iloc[-6] - 1) * 100, 2)
 
@@ -296,7 +305,10 @@ def main() -> int:
     print(f"Universe: {len(MIDSMALL_TICKERS)} stocks  |  Date: {today}\n")
 
     # ── Stage 1: 52-week high proximity + 5-day momentum ────────────────────
-    print(f"── Stage 1: Within {MAX_PROXIMITY_GAP*100:.0f}% of 52-week high + positive 5-day momentum ──")
+    print(
+        f"── Stage 1: {EGA_MIN_GAP_PCT:.0f}-{EGA_MAX_GAP_PCT:.0f}% below 52-week high "
+        f"(no fresh high in 2w) + positive 5-day momentum ──"
+    )
     stage1_survivors: list[tuple[str, pd.DataFrame, dict]] = []
 
     for i, ticker in enumerate(MIDSMALL_TICKERS, 1):
@@ -372,7 +384,7 @@ def main() -> int:
             print(f"Rationale  : {w.note}")
     else:
         print("\nNo winners — no stocks passed all three stages.")
-        print(f"Tip: loosen MAX_PROXIMITY_GAP ({MAX_PROXIMITY_GAP}) or MIN_EARNINGS_GROWTH ({MIN_EARNINGS_GROWTH}).")
+        print(f"Tip: loosen EGA band ({EGA_MIN_GAP_PCT}-{EGA_MAX_GAP_PCT}%) or MIN_EARNINGS_GROWTH ({MIN_EARNINGS_GROWTH}).")
 
     print("=" * 65)
     write_csv(csv_path, winners)

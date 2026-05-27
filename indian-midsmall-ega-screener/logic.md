@@ -15,10 +15,11 @@ Selects from **Nifty Midcap + Smallcap universe** using **Earnings Growth Accele
 ### Stage 1 — Price Proximity + Momentum Pre-Filter (Fast)
 
 **Gates:**
-1. Price within 10% of 52-week high
-2. Positive 5-day momentum
+1. Price **3–10% below** 52-week high (sweet spot — close but not hugging the high)
+2. 52-week high **not set in the last 10 trading days** (avoids fresh breakouts)
+3. Positive 5-day momentum
 
-**Why:** Quick filter for stocks in active uptrends. Avoids stale or falling names. 10% proximity = still in momentum phase.
+**Why:** Quick filter for stocks in active uptrends without buying names that just printed new highs.
 
 ---
 
@@ -95,7 +96,8 @@ For each of the top 2 winners:
 | Parameter | Value | Notes |
 |-----------|-------|-------|
 | Universe | Nifty Midcap + Smallcap | Growth-focused mid/small caps |
-| Stage 1 — Proximity | ≤ 10% below 52-week high | Momentum proximity |
+| Stage 1 — Proximity | 3–10% below 52-week high | Momentum sweet spot |
+| Stage 1 — Fresh high | 52w high ≥ 10 trading days old | Avoid post-breakout risk |
 | Stage 1 — Momentum | 5-day return > 0% | Recent uptrend confirmation |
 | Stage 2 — Earnings | YoY growth ≥ 10% | Meaningful growth |
 | Stage 2 — Revenue | YoY growth ≥ 5% | Top-line backing |

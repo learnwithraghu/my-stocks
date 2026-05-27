@@ -15,6 +15,12 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 import yfinance as yf
 
+_ROOT = Path(__file__).resolve().parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
+from filters_52w import BAND_TURTLE_DM, passes_52w_sweet_spot
+
 IST = ZoneInfo("Asia/Kolkata")
 
 ETF_UNIVERSE = [
@@ -47,7 +53,7 @@ ETF_UNIVERSE = [
 
 BUDGET_INR = 300_000
 TRADE_SIZE_INR = 15_000
-MAX_SLOTS = BUDGET_INR // TRADE_SIZE_INR  # 20
+MAX_SLOTS = 2
 PROFIT_TARGET_PCT = 3.14
 
 MOM_1M, MOM_3M, MOM_6M, MOM_12M = 21, 63, 126, 252
@@ -68,6 +74,7 @@ OUTPUT_COLUMNS = [
     "todays_last_price_inr",
     "price_as_of",
     "last_eod_close_inr",
+    "gap_to_52wh_pct",
     "tomorrow_buy_trigger_inr",
     "profit_target_inr",
     "qty",
@@ -89,6 +96,7 @@ class EtfMetrics:
     rsi: float | None
     vol_ratio: float | None
     above_exit_zone: bool | None
+    gap_to_52wh_pct: float | None
     recommended: bool
     score: float | None
 
@@ -206,7 +214,7 @@ def analyze_one(etf: dict, nifty_3m: float | None) -> EtfMetrics:
     ticker = etf["ticker"]
     df = fetch_history(ticker)
     if df is None or len(df["Close"]) < MIN_HISTORY:
-        return EtfMetrics(ticker, None, None, None, None, None, None, None, None, None, None, False, None)
+        return EtfMetrics(ticker, None, None, None, None, None, None, None, None, None, None, None, False, None)
 
     close, high, low, volume = df["Close"], df["High"], df["Low"], df["Volume"]
     last_eod_close = round(float(close.iloc[-1]), 2)
@@ -219,6 +227,8 @@ def analyze_one(etf: dict, nifty_3m: float | None) -> EtfMetrics:
     dc_low = float(low.iloc[-(TURTLE_EXIT_DAYS + 1):-1].min()) if len(low) > TURTLE_EXIT_DAYS else None
     above_exit = price > dc_low if dc_low is not None else None
 
+    passes_52w, gap_52wh, _ = passes_52w_sweet_spot(df, price, *BAND_TURTLE_DM)
+
     gates_fail = (
         r12 is None
         or r12 <= 0
@@ -229,6 +239,7 @@ def analyze_one(etf: dict, nifty_3m: float | None) -> EtfMetrics:
         or vol_ratio is None
         or vol_ratio < VOL_MIN_FACTOR
         or above_exit is not True
+        or not passes_52w
     )
     recommended = not gates_fail
     score = (
@@ -248,6 +259,7 @@ def analyze_one(etf: dict, nifty_3m: float | None) -> EtfMetrics:
         rsi_val,
         vol_ratio,
         above_exit,
+        gap_52wh if passes_52w else None,
         recommended,
         score,
     )
@@ -277,6 +289,7 @@ def build_order_rows(picks: list[EtfMetrics]) -> list[dict]:
                 "todays_last_price_inr": m.price,
                 "price_as_of": m.price_as_of or "",
                 "last_eod_close_inr": m.last_eod_close,
+                "gap_to_52wh_pct": m.gap_to_52wh_pct,
                 "tomorrow_buy_trigger_inr": trigger,
                 "profit_target_inr": target,
                 "qty": qty,
@@ -299,6 +312,7 @@ def write_final_csv(path: Path, picks: list[EtfMetrics]) -> None:
                     "todays_last_price_inr": "",
                     "price_as_of": "",
                     "last_eod_close_inr": "",
+                    "gap_to_52wh_pct": "",
                     "tomorrow_buy_trigger_inr": "",
                     "profit_target_inr": "",
                     "qty": "",
