@@ -41,9 +41,9 @@ Traditional methods (Piotroski, Turtle, Momentum) are widely known. Edge comes f
 
 | Market | Budget per trade | Transaction fee | Profit target | Shares |
 |--------|-----------------|-----------------|---------------|--------|
-| Indian (Nifty) | Rs 5,000 | none assumed | varies | Whole shares only |
-| Indian Midcap PEAD | Rs 10,000 | none assumed | varies | Whole shares only |
-| Indian ETF | Rs 5,000 | none assumed | varies | Whole shares |
+| Indian (Nifty) | Rs 10,000 | none assumed | Rs 500 or 3.14%, whichever comes first | Whole shares only |
+| Indian Midcap PEAD | Rs 10,000 | none assumed | Rs 500 or 3.14%, whichever comes first | Whole shares only |
+| Indian ETF | Rs 10,000 | none assumed | Rs 500 or 3.14%, whichever comes first | Whole shares |
 
 ---
 
@@ -111,4 +111,4 @@ Before accepting a method as valid for the "new" slot, verify all:
 
 ## Raghu's Style in One Paragraph
 
-Raghu is a systematic investor who runs automated daily screeners across Indian markets. He favors quantitative funnel approaches — stacking 2-3 independent signals — over single-indicator systems. He insists on at least one method that reflects post-2021 institutional thinking so his edge does not come from widely-known, easily-arbitraged factors alone. He trades with fixed small budgets (Rs 5000–10000 per pick) and needs methods that generate high-conviction, short-to-medium-term moves. He prefers 1-2 high-quality picks over a long list of mediocre ones. He has validated that tight pre-filters (200 DMA, 52-week high proximity, consolidation range) dramatically improve signal quality by eliminating structurally broken stocks before expensive fundamental checks run.
+Raghu is a systematic investor who runs automated daily screeners across Indian markets. He favors quantitative funnel approaches — stacking 2-3 independent signals — over single-indicator systems. He insists on at least one method that reflects post-2021 institutional thinking so his edge does not come from widely-known, easily-arbitraged factors alone. He trades with fixed Rs 10,000 budgets per pick and targets Rs 500 total gain or 3.14%, whichever comes first. He needs methods that generate high-conviction, short-to-medium-term moves. He prefers 1-2 high-quality picks over a long list of mediocre ones. He has validated that tight pre-filters (200 DMA, 52-week high proximity, consolidation range) dramatically improve signal quality by eliminating structurally broken stocks before expensive fundamental checks run.

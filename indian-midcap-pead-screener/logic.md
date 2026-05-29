@@ -11,6 +11,7 @@ Selects **1 winner** from **Nifty Midcap 100** using a three-stage funnel:
 | Stage 3 | 12-1 month momentum rank | Tiebreaker (Piotroski-style) |
 
 **Investment:** ₹10,000 per winner (whole shares).  
+**Profit target:** whichever comes first: ₹500 total gain on the position or +3.14% from entry.  
 **Horizon:** 2–6 weeks (post-earnings drift).
 
 Runs **alongside** `indian-midsmall-ega-screener` (different universe, signal, and budget).
@@ -64,7 +65,7 @@ Pick **highest** `pead_rank_score`. Tie-break: higher `surprise_pct`, then highe
 
 **File:** `output/midcap_winner.csv`
 
-**Columns:** `date`, `ticker`, `company_name`, `current_price_inr`, `quantity`, `investment_inr`, `surprise_pct`, `earnings_days_ago`, `momentum_12_1_pct`, `above_200dma`, `rsi_14`, `gap_to_52wh_pct`, `pe_ratio`, `market_cap_cr`, `pead_rank_score`, `note`
+**Columns:** `date`, `ticker`, `company_name`, `current_price_inr`, `quantity`, `investment_inr`, `surprise_pct`, `earnings_days_ago`, `momentum_12_1_pct`, `above_200dma`, `rsi_14`, `gap_to_52wh_pct`, `pe_ratio`, `market_cap_cr`, `pead_rank_score`, `note`, `profit_target_inr`
 
 If no winner: one row, `note` = `No stocks to recommend at this time`.
 
@@ -76,6 +77,7 @@ If no winner: one row, `note` = `No stocks to recommend at this time`.
 |-----------|-------|
 | Universe | Nifty Midcap 100 |
 | Investment | ₹10,000 |
+| Profit target | ₹500 or 3.14%, whichever comes first |
 | Max winners | 1 |
 | Earnings window | 30 days |
 | Min surprise (estimate) | 3% |

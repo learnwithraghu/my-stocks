@@ -5,7 +5,7 @@ Nifty Midcap + Smallcap EGA Screener
 Method  : Earnings Growth Acceleration (EGA) + 52-Week High Proximity
 Horizon : 2-3 weeks
 Winners : Top 2 by EGA composite score
-Budget  : Rs 5,000 per stock
+Budget  : Rs 10,000 per stock
 
 Stage 1 (fast)   : Within 10% of 52-week high + positive 5-day momentum
 Stage 2 (detail) : EGA quality gate (earnings growth >= 10%, revenue >= 5%)
@@ -34,7 +34,9 @@ if str(_ROOT) not in sys.path:
 from filters_52w import BAND_EGA, high_52w_from_history, passes_52w_sweet_spot
 
 IST = ZoneInfo("Asia/Kolkata")
-INVESTMENT_INR = 5000
+INVESTMENT_INR = 10_000
+PROFIT_TARGET_PCT = 3.14
+PROFIT_TARGET_GAIN_INR = 500
 EGA_MIN_GAP_PCT, EGA_MAX_GAP_PCT = BAND_EGA
 MIN_EARNINGS_GROWTH = 0.10  # 10% YoY earnings growth
 MIN_REVENUE_GROWTH = 0.05   # 5% YoY revenue growth
@@ -49,6 +51,7 @@ OUTPUT_COLUMNS = [
     "earnings_growth_pct", "revenue_growth_pct",
     "gap_to_52wh_pct", "momentum_5d_pct", "rsi_14",
     "ega_score", "pe_ratio", "market_cap_cr", "note",
+    "profit_target_inr",
 ]
 
 
@@ -68,10 +71,17 @@ class StockResult:
     pe_ratio: Optional[float]
     market_cap_cr: Optional[float]
     note: str
+    profit_target_inr: float
 
 
 def yahoo_symbol(ticker: str) -> str:
     return f"{ticker}.NS"
+
+
+def profit_target_price(entry_price: float, quantity: int) -> float:
+    pct_target = entry_price * (1 + PROFIT_TARGET_PCT / 100)
+    fixed_gain_target = entry_price + (PROFIT_TARGET_GAIN_INR / max(quantity, 1))
+    return round(min(pct_target, fixed_gain_target), 2)
 
 
 def safe_get(info: dict, keys: list[str], default=None):
@@ -241,6 +251,7 @@ def analyze_stock(
         company_name = safe_get(info, ["longName", "shortName"], ticker)
         quantity = max(1, int(INVESTMENT_INR // current_price))
         investment = round(quantity * current_price, 2)
+        profit_target = profit_target_price(current_price, quantity)
 
         note = (
             f"EarnGrowth:{earnings_growth_pct:+.1f}% "
@@ -266,6 +277,7 @@ def analyze_stock(
             pe_ratio=round(pe_ratio, 2) if pe_ratio else None,
             market_cap_cr=market_cap_cr,
             note=note,
+            profit_target_inr=profit_target,
         )
 
     except Exception as e:
@@ -301,7 +313,10 @@ def main() -> int:
 
     print("Nifty Midcap + Smallcap EGA Screener")
     print(f"Method  : Earnings Growth Acceleration + 52-Week High Proximity")
-    print(f"Horizon : 2-3 weeks  |  Budget: Rs{INVESTMENT_INR:,}/stock  |  Winners: {TOP_N}")
+    print(
+        f"Horizon : 2-3 weeks  |  Budget: Rs{INVESTMENT_INR:,}/stock  |  "
+        f"Target: min(Rs{PROFIT_TARGET_GAIN_INR}, +{PROFIT_TARGET_PCT}%)  |  Winners: {TOP_N}"
+    )
     print(f"Universe: {len(MIDSMALL_TICKERS)} stocks  |  Date: {today}\n")
 
     # ── Stage 1: 52-week high proximity + 5-day momentum ────────────────────

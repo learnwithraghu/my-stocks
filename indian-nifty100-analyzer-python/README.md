@@ -36,8 +36,9 @@ python analyze_stocks.py
 Edit top of `analyze_stocks.py`:
 
 - `BUDGET_INR` = 300000  
-- `TRADE_SIZE_INR` = 15000  
+- `TRADE_SIZE_INR` = 10000  
 - `PROFIT_TARGET_PCT` = 3.14  
+- `PROFIT_TARGET_GAIN_INR` = 500  
 - `BENCHMARK` = NIFTYBEES (relative strength)
 
 Edit universe in `nifty100_universe.py` (refresh from [Nifty 100 constituents](https://www.niftyindices.com/indices/equity/broad-based-indices/nifty-100) periodically).

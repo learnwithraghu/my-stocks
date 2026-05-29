@@ -23,8 +23,9 @@ CONFIG = {
     "benchmark": "NIFTYBEES",
     "yahoo_suffix": ".NS",
     "budget": 300_000,
-    "trade_size": 15_000,
+    "trade_size": 10_000,
     "profit_target_pct": 3.14,
+    "profit_target_gain": 500,
     "max_picks": 20,
     "timezone": "Asia/Kolkata",
     "safety_below_eod": 0.06,
@@ -128,6 +129,12 @@ def final_trigger(live: float, eod: float, r1: float | None, r3: float | None) -
     return trig, note
 
 
+def profit_target_price(entry_price: float, qty: int) -> float:
+    pct_target = entry_price * (1 + CONFIG["profit_target_pct"] / 100)
+    fixed_gain_target = entry_price + (CONFIG["profit_target_gain"] / max(qty, 1))
+    return round(min(pct_target, fixed_gain_target), 2)
+
+
 def analyze_symbol(ticker: str, bench_3m: float | None) -> Pick | None:
     df = fetch_history(ticker)
     if df is None:
@@ -157,9 +164,9 @@ def analyze_symbol(ticker: str, bench_3m: float | None) -> Pick | None:
 
     score = round(r12 * 0.4 + (r6 or 0) * 0.3 + (r3 or 0) * 0.2 + (r1 or 0) * 0.1, 2)
     trig, note = final_trigger(live, eod, r1, r3)
-    target = round(trig * (1 + CONFIG["profit_target_pct"] / 100), 2)
     qty = max(1, int(CONFIG["trade_size"] // trig))
     amount = int(round(qty * trig))
+    target = profit_target_price(trig, qty)
 
     return Pick(ticker, live, today, eod, trig, target, qty, amount, note, score)
 

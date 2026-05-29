@@ -54,7 +54,7 @@ All use the same `final_output_YYYYMMDD.csv` format.
 | `price_as_of` | Quote date `YYYY-MM-DD` |
 | `last_eod_close_inr` | Last completed daily close |
 | `tomorrow_buy_trigger_inr` | LIMIT for next session (after safety floor) |
-| `profit_target_inr` | Trigger × (1 + profit_target_pct/100) |
+| `profit_target_inr` | Lower of percentage target and fixed-gain target |
 | `qty` | floor(trade_size / trigger), min 1 |
 | `amount_inr` | qty × trigger |
 | `note` | `Passes all recommendation gates` or no-buy message |
@@ -91,7 +91,7 @@ Do **not** add extra columns (e.g. no `safety_min_trigger_inr`).
 
 1. **Momentum trigger:** live price if 1M ≥ 3M return, else live × 0.998.
 2. **App safety (always apply):** `trigger = max(momentum_trigger, last_eod_close - 0.06 + 0.01)` so broker apps requiring price above EOD−6 paise are satisfied.
-3. **Profit target:** `trigger × (1 + profit_target_pct/100)` (default 3.14%).
+3. **Profit target:** lower of `trigger × (1 + profit_target_pct/100)` and `trigger + profit_target_gain/qty` (defaults: 3.14% or Rs 500 total gain).
 4. **Sizing:** `qty = max(1, floor(trade_size / trigger))`, cap count at `budget // trade_size`.
 
 ## Configuring for another index
@@ -104,8 +104,9 @@ CONFIG = {
     "benchmark": "SPY",                      # RS vs this symbol's 3M return
     "yahoo_suffix": "",                      # ".NS" for NSE, "" for US
     "budget": 300_000,
-    "trade_size": 15_000,
+    "trade_size": 10_000,
     "profit_target_pct": 3.14,
+    "profit_target_gain": 500,
     "max_picks": 20,
     "timezone": "Asia/Kolkata",              # or "America/New_York"
 }

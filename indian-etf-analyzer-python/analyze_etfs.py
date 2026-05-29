@@ -52,9 +52,10 @@ ETF_UNIVERSE = [
 ]
 
 BUDGET_INR = 300_000
-TRADE_SIZE_INR = 15_000
+TRADE_SIZE_INR = 10_000
 MAX_SLOTS = 2
 PROFIT_TARGET_PCT = 3.14
+PROFIT_TARGET_GAIN_INR = 500
 
 MOM_1M, MOM_3M, MOM_6M, MOM_12M = 21, 63, 126, 252
 MIN_HISTORY = MOM_12M + 10
@@ -210,6 +211,12 @@ def position_size(trigger: float) -> tuple[int, int]:
     return qty, amount
 
 
+def profit_target_price(entry_price: float, qty: int) -> float:
+    pct_target = entry_price * (1 + PROFIT_TARGET_PCT / 100)
+    fixed_gain_target = entry_price + (PROFIT_TARGET_GAIN_INR / max(qty, 1))
+    return round(min(pct_target, fixed_gain_target), 2)
+
+
 def analyze_one(etf: dict, nifty_3m: float | None) -> EtfMetrics:
     ticker = etf["ticker"]
     df = fetch_history(ticker)
@@ -265,14 +272,14 @@ def analyze_one(etf: dict, nifty_3m: float | None) -> EtfMetrics:
     )
 
 
-def order_for_pick(m: EtfMetrics) -> tuple[float, float, float, int, int, str]:
+def order_for_pick(m: EtfMetrics) -> tuple[float, float, int, int, float, str]:
     assert m.price is not None and m.last_eod_close is not None
     raw = momentum_trigger_price(m.price, m.ret_1m, m.ret_3m)
     trigger, safety_floor, _ = apply_trigger_with_safety(
         m.price, m.last_eod_close, m.ret_1m, m.ret_3m
     )
-    target = round(trigger * (1 + PROFIT_TARGET_PCT / 100), 2)
     qty, amount = position_size(trigger)
+    target = profit_target_price(trigger, qty)
     note = PASS_NOTE
     if trigger > raw:
         note = f"{PASS_NOTE}; trigger raised to app safety (> {safety_floor})"
@@ -340,7 +347,10 @@ def main() -> int:
     final_path = out_dir / f"final_output_{run_date}.csv"
     run_at = datetime.now(IST).strftime("%Y-%m-%d %H:%M IST")
 
-    print(f"Indian ETF Analyzer | budget ₹{BUDGET_INR:,} | ₹{TRADE_SIZE_INR:,}/trade | target +{PROFIT_TARGET_PCT}%")
+    print(
+        f"Indian ETF Analyzer | budget ₹{BUDGET_INR:,} | ₹{TRADE_SIZE_INR:,}/trade | "
+        f"target min(₹{PROFIT_TARGET_GAIN_INR}, +{PROFIT_TARGET_PCT}%)"
+    )
     print(f"Run: {run_at}\n")
 
     nb = fetch_history("NIFTYBEES")

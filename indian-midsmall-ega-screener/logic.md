@@ -4,7 +4,7 @@
 
 Selects from **Nifty Midcap + Smallcap universe** using **Earnings Growth Acceleration (EGA)** combined with **52-week proximity**.
 
-**Investment model:** ₹5,000 per winner (top 2 by EGA score).
+**Investment model:** ₹10,000 per winner (top 2 by EGA score).
 
 **Horizon:** 2–3 week swing trades (earnings-momentum driven).
 
@@ -70,11 +70,11 @@ For each of the top 2 winners:
    - Use live price (earnings momentum doesn't wait)
    - Apply **app safety floor**: must be above `(last EOD close − ₹0.06) + ₹0.01` on NSE
 
-2. **Profit target** = trigger × 1.0314 (+3.14%)
+2. **Profit target** = whichever comes first: ₹500 total gain on the position or +3.14% from entry
 
-3. **Quantity** = `₹5,000 ÷ trigger` (whole shares)
+3. **Quantity** = `₹10,000 ÷ entry price` (whole shares)
 
-4. **Amount** = ₹5,000 per stock (₹10,000 total for 2 winners)
+4. **Amount** = qty × entry price (≈ ₹10,000 per stock, up to ₹20,000 total for 2 winners)
 
 ---
 
@@ -82,7 +82,7 @@ For each of the top 2 winners:
 
 **File:** `output/final_output_YYYYMMDD.csv`
 
-**Columns:** `date`, `ticker`, `company_name`, `current_price_inr`, `quantity`, `investment_inr`, `earnings_growth_pct`, `revenue_growth_pct`, `gap_to_52wh_pct`, `momentum_5d_pct`, `rsi_14`, `ega_score`, `pe_ratio`, `market_cap_cr`, `note`
+**Columns:** `date`, `ticker`, `company_name`, `current_price_inr`, `quantity`, `investment_inr`, `earnings_growth_pct`, `revenue_growth_pct`, `gap_to_52wh_pct`, `momentum_5d_pct`, `rsi_14`, `ega_score`, `pe_ratio`, `market_cap_cr`, `note`, `profit_target_inr`
 
 - Top 2 rows: the 2 stocks with highest EGA scores (both passing Stage 1–2)
 - If fewer than 2 pass: fewer rows (e.g., 1 if only 1 survivor, 0 if none)
@@ -107,7 +107,8 @@ For each of the top 2 winners:
 | 52-week window | ~252 trading days | Full-year high reference |
 | 5-day window | ~5 trading days | Short-term momentum |
 | RSI period | 14 | Standard momentum oscillator |
-| Investment per winner | ₹5,000 | Fixed allocation |
+| Investment per winner | ₹10,000 | Fixed allocation |
+| Profit target | ₹500 or 3.14% | Whichever comes first |
 | Max winners | 2 | Top 2 by EGA score |
 
 ---

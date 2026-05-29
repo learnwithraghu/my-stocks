@@ -8,10 +8,10 @@ This repo contains Python stock and ETF screeners for Indian markets. The main d
 
 Primary projects:
 
-- `indian-etf-analyzer-python/`: Indian ETF Turtle/Dual Momentum screener, top 2 picks at Rs 15,000 each.
-- `indian-nifty100-analyzer-python/`: Nifty 100 Turtle/Dual Momentum screener, top 2 picks at Rs 15,000 each.
-- `indian-nifty200-piotroski/`: Nifty 200 Piotroski F-Score screener, 1 winner at Rs 5,000.
-- `indian-midsmall-ega-screener/`: Midcap/Smallcap Earnings Growth Acceleration screener, 2 winners at Rs 5,000 each.
+- `indian-etf-analyzer-python/`: Indian ETF Turtle/Dual Momentum screener, top 2 picks at Rs 10,000 each.
+- `indian-nifty100-analyzer-python/`: Nifty 100 Turtle/Dual Momentum screener, top 2 picks at Rs 10,000 each.
+- `indian-nifty200-piotroski/`: Nifty 200 Piotroski F-Score screener, 1 winner at Rs 10,000.
+- `indian-midsmall-ega-screener/`: Midcap/Smallcap Earnings Growth Acceleration screener, 2 winners at Rs 10,000 each.
 - `indian-midcap-pead-screener/`: Nifty Midcap 100 PEAD screener, 1 winner at Rs 10,000.
 - `.agent/turtle-dual-momentum/`: Agent skill and generic runner for Turtle/Dual Momentum strategies.
 
@@ -49,6 +49,9 @@ GitHub Actions cron uses UTC.
 - Other analyzers write fixed CSVs such as `piotroski_winner.csv`, `ega_winners.csv`, and `midcap_winner.csv`.
 - Generated output CSVs are artifacts, not source. Do not commit them unless the user explicitly asks.
 - If no symbol passes filters, scripts usually emit a single "No stocks to recommend at this time" row.
+- Every method uses Rs 10,000 per selected pick.
+- Profit targets use the first/lower target between Rs 500 total gain on the position and +3.14% from entry.
+- When adding new Google Sheets columns, append them to `OUTPUT_COLUMNS` so existing sheet data does not shift under different headers.
 
 ## Google Sheets Uploads
 
@@ -63,6 +66,7 @@ GitHub Actions cron uses UTC.
 - Keep strategy constants near the top of each analyzer script.
 - Use `.NS` Yahoo Finance symbols for NSE tickers through local `yahoo_symbol()` helpers.
 - Shared 52-week high filters live in `filters_52w.py`; reuse them rather than duplicating that logic.
+- Keep investment sizing and profit target constants consistent across methods unless the user asks for method-specific values.
 - Universe membership is defined in each `*_universe.py` file. Update those lists carefully and keep ticker strings plain.
 - Date-sensitive screener outputs use IST (`Asia/Kolkata`) unless a file already documents otherwise.
 

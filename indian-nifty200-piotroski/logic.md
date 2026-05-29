@@ -4,7 +4,7 @@
 
 Selects from **Nifty 200 stocks** (200 NSE large & mid-caps) using a **three-stage funnel** combining trend health, fundamental strength, and momentum confirmation.
 
-**Investment model:** ₹5,000 per winner (1 recommendation per day max).
+**Investment model:** ₹10,000 per winner (1 recommendation per day max).
 
 **Horizon:** Weekly/swing trades (typically 1-3 weeks holding, fundamentals-driven).
 
@@ -67,11 +67,11 @@ For the 1 winner:
    - Use live price (no pullback strategy at this horizon)
    - Apply **app safety floor**: must be above `(last EOD close − ₹0.06) + ₹0.01` on NSE
 
-2. **Profit target** = trigger × 1.0314 (+3.14%)
+2. **Profit target** = whichever comes first: ₹500 total gain on the position or +3.14% from entry
 
-3. **Quantity** = `₹5,000 ÷ trigger` (whole shares)
+3. **Quantity** = `₹10,000 ÷ entry price` (whole shares)
 
-4. **Amount** = ₹5,000 (fixed investment)
+4. **Amount** = qty × entry price (≈ ₹10,000)
 
 ---
 
@@ -79,7 +79,7 @@ For the 1 winner:
 
 **File:** `output/final_output_YYYYMMDD.csv`
 
-**Columns:** `date`, `ticker`, `company_name`, `current_price_inr`, `f_score`, `quantity`, `investment_inr`, `market_cap_cr`, `roe_pct`, `debt_to_equity`, `pe_ratio`, `pb_ratio`, `momentum_12_1_pct`, `above_200dma`, `note`
+**Columns:** `date`, `ticker`, `company_name`, `current_price_inr`, `f_score`, `quantity`, `investment_inr`, `market_cap_cr`, `roe_pct`, `debt_to_equity`, `pe_ratio`, `pb_ratio`, `momentum_12_1_pct`, `above_200dma`, `note`, `profit_target_inr`
 
 - 1 row: the top 1 momentum stock from all Stage 2 survivors
 - If no stock passes Stage 1–2: `No stocks to recommend at this time`
@@ -98,7 +98,8 @@ For the 1 winner:
 | 200-DMA window | 200 trading days | Long-term trend baseline |
 | 12-month window | 252 trading days | Full-year momentum |
 | 1-month window | ~21 trading days | Current momentum |
-| Investment per winner | ₹5,000 | Fixed allocation |
+| Investment per winner | ₹10,000 | Fixed allocation |
+| Profit target | ₹500 or 3.14% | Whichever comes first |
 
 ---
 

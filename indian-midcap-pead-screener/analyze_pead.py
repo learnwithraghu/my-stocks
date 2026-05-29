@@ -25,6 +25,8 @@ from midcap100_universe import NIFTY_MIDCAP100_TICKERS
 
 IST = ZoneInfo("Asia/Kolkata")
 INVESTMENT_INR = 10_000
+PROFIT_TARGET_PCT = 3.14
+PROFIT_TARGET_GAIN_INR = 500
 RSI_MIN = 45
 RSI_MAX = 75
 MIN_VOLUME_RATIO = 0.70
@@ -51,6 +53,7 @@ OUTPUT_COLUMNS = [
     "market_cap_cr",
     "pead_rank_score",
     "note",
+    "profit_target_inr",
 ]
 
 
@@ -71,10 +74,17 @@ class StockResult:
     market_cap_cr: Optional[float]
     pead_rank_score: float
     note: str
+    profit_target_inr: float
 
 
 def yahoo_symbol(ticker: str) -> str:
     return f"{ticker}.NS"
+
+
+def profit_target_price(entry_price: float, quantity: int) -> float:
+    pct_target = entry_price * (1 + PROFIT_TARGET_PCT / 100)
+    fixed_gain_target = entry_price + (PROFIT_TARGET_GAIN_INR / max(quantity, 1))
+    return round(min(pct_target, fixed_gain_target), 2)
 
 
 def safe_get_val(info: dict, keys: list[str], default=None):
@@ -359,6 +369,7 @@ def analyze_stock(
         company_name = safe_get_val(info, ["longName", "shortName"], ticker) or ticker
         quantity = max(1, int(INVESTMENT_INR // current_price))
         investment = round(quantity * current_price, 2)
+        profit_target = profit_target_price(current_price, quantity)
 
         mom_str = f"{momentum:+.1f}%" if momentum is not None else "N/A"
         note = (
@@ -383,6 +394,7 @@ def analyze_stock(
             market_cap_cr=market_cap_cr,
             pead_rank_score=rank,
             note=note,
+            profit_target_inr=profit_target,
         )
     except Exception as e:
         print(f"  [warn] {ticker}: {e}", file=sys.stderr)
@@ -427,7 +439,10 @@ def main() -> int:
 
     print("Nifty Midcap 100 PEAD Daily Winner Screener")
     print("Stage 1: 200 DMA + RSI + Volume  |  Stage 2: PEAD surprise + drift  |  Stage 3: 12-1M rank")
-    print(f"Investment: Rs{INVESTMENT_INR:,}  |  Universe: {len(NIFTY_MIDCAP100_TICKERS)} stocks  |  Date: {today}\n")
+    print(
+        f"Investment: Rs{INVESTMENT_INR:,}  |  Target: min(Rs{PROFIT_TARGET_GAIN_INR}, +{PROFIT_TARGET_PCT}%)  |  "
+        f"Universe: {len(NIFTY_MIDCAP100_TICKERS)} stocks  |  Date: {today}\n"
+    )
 
     print(f"── Stage 1: 200 DMA + RSI({RSI_MIN}-{RSI_MAX}) + volume ({len(NIFTY_MIDCAP100_TICKERS)} stocks) ──")
     stage1_survivors: list[tuple[str, pd.DataFrame, float]] = []

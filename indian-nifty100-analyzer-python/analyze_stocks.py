@@ -26,9 +26,10 @@ from filters_52w import BAND_TURTLE_DM, passes_52w_sweet_spot
 IST = ZoneInfo("Asia/Kolkata")
 BENCHMARK = "NIFTYBEES"
 BUDGET_INR = 300_000
-TRADE_SIZE_INR = 15_000
+TRADE_SIZE_INR = 10_000
 MAX_SLOTS = 2
 PROFIT_TARGET_PCT = 3.14
+PROFIT_TARGET_GAIN_INR = 500
 
 TURTLE_ENTRY_DAYS = 55
 TURTLE_EXIT_DAYS = 20
@@ -141,6 +142,12 @@ def position_size(trigger: float) -> tuple[int, int]:
     return qty, int(round(qty * trigger))
 
 
+def profit_target_price(entry_price: float, qty: int) -> float:
+    pct_target = entry_price * (1 + PROFIT_TARGET_PCT / 100)
+    fixed_gain_target = entry_price + (PROFIT_TARGET_GAIN_INR / max(qty, 1))
+    return round(min(pct_target, fixed_gain_target), 2)
+
+
 def analyze_stock(ticker: str, bench_3m: float | None) -> StockPick | None:
     df = fetch_history(ticker)
     if df is None:
@@ -181,8 +188,8 @@ def analyze_stock(ticker: str, bench_3m: float | None) -> StockPick | None:
 
     score = round(r12 * 0.4 + (r6 or 0) * 0.3 + (r3 or 0) * 0.2 + (r1 or 0) * 0.1, 2)
     trig, note = apply_trigger(live, eod, r1, r3)
-    target = round(trig * (1 + PROFIT_TARGET_PCT / 100), 2)
     qty, amount = position_size(trig)
+    target = profit_target_price(trig, qty)
     return StockPick(ticker, live, today, eod, trig, target, qty, amount, note, score, gap_52wh)
 
 
@@ -226,7 +233,8 @@ def main() -> int:
 
     print(
         f"Nifty 100 Turtle + Dual Momentum | {len(NIFTY100_TICKERS)} stocks | "
-        f"budget ₹{BUDGET_INR:,} | ₹{TRADE_SIZE_INR:,}/trade | +{PROFIT_TARGET_PCT}%"
+        f"budget ₹{BUDGET_INR:,} | ₹{TRADE_SIZE_INR:,}/trade | "
+        f"target min(₹{PROFIT_TARGET_GAIN_INR}, +{PROFIT_TARGET_PCT}%)"
     )
     print(f"Benchmark RS: {BENCHMARK} | Run: {datetime.now(IST).strftime('%Y-%m-%d %H:%M IST')}\n")
 

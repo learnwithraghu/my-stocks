@@ -27,14 +27,14 @@ python analyze_etfs.py
 | `price_as_of` | Date of live quote |
 | `last_eod_close_inr` | Last completed daily close (Yahoo) |
 | `tomorrow_buy_trigger_inr` | LIMIT (momentum + app safety floor applied) |
-| `profit_target_inr` | Trigger + **3.14%** |
-| `qty` | Units for ~₹15,000/trade |
+| `profit_target_inr` | Lower of **₹500 total gain** or **+3.14%** from trigger |
+| `qty` | Units for ~₹10,000/trade |
 | `amount_inr` | qty × trigger |
 | `note` | `Passes all recommendation gates` |
 
 ## Budget
 
 - Total: **₹3,00,000**
-- Per trade: **₹15,000** (max **20** slots)
+- Per trade: **₹10,000** (max **2** picks)
 
 Not investment advice.

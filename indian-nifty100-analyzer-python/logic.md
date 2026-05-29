@@ -4,7 +4,7 @@
 
 Selects from **Nifty 100 stocks** (100 NSE large-caps) using **Turtle Trading + Dual Momentum** framework.
 
-**Investment model:** ₹15,000 per recommendation (max 2 picks).
+**Investment model:** ₹10,000 per recommendation (max 2 picks).
 
 **Horizon:** Daily signals (short-term momentum traders).
 
@@ -75,11 +75,11 @@ For each picked stock:
    - Else → use live price × 0.998 (pullback entry)
    - Apply **app safety floor**: must be above `(last EOD close − ₹0.06) + ₹0.01` on NSE
 
-2. **Profit target** = trigger × 1.0314 (+3.14%)
+2. **Profit target** = whichever comes first: ₹500 total gain on the position or +3.14% from trigger
 
-3. **Quantity** = `max(1, floor(₹15,000 ÷ trigger))` whole shares
+3. **Quantity** = `max(1, floor(₹10,000 ÷ trigger))` whole shares
 
-4. **Amount** = qty × trigger (≈ ₹15,000 per slot)
+4. **Amount** = qty × trigger (≈ ₹10,000 per slot)
 
 ---
 
@@ -107,9 +107,9 @@ For each picked stock:
 | 3-month window | 63 trading days | Relative momentum period |
 | RSI period | 14 | Standard momentum oscillator |
 | Volume threshold | 70% | Of 20-day average |
-| Profit target | 3.14% | Fixed per recommendation |
+| Profit target | ₹500 or 3.14% | Whichever comes first |
 | Max slots | 2 | Whole shares only |
-| Per-trade budget | ₹15,000 | Fixed per pick |
+| Per-trade budget | ₹10,000 | Fixed per pick |
 
 ---
 

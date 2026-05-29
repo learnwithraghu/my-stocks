@@ -6,7 +6,7 @@ Stage 1: Price > 200-Day Moving Average  (trend health pre-filter)
 Stage 2: Piotroski F-Score >= 7          (true YoY comparisons, not proxies)
 Stage 3: 12-1 Month Price Momentum       (market confirmation; highest wins)
 
-Investment per winner: 5000 INR
+Investment per winner: 10000 INR
 """
 
 from __future__ import annotations
@@ -24,7 +24,9 @@ import yfinance as yf
 from nifty200_universe import NIFTY200_TICKERS
 
 IST = ZoneInfo("Asia/Kolkata")
-INVESTMENT_INR = 5000
+INVESTMENT_INR = 10_000
+PROFIT_TARGET_PCT = 3.14
+PROFIT_TARGET_GAIN_INR = 500
 MIN_FSCORE = 7
 
 OUTPUT_COLUMNS = [
@@ -43,6 +45,7 @@ OUTPUT_COLUMNS = [
     "momentum_12_1_pct",
     "above_200dma",
     "note",
+    "profit_target_inr",
 ]
 
 
@@ -62,10 +65,17 @@ class StockResult:
     momentum_12_1_pct: Optional[float]
     above_200dma: bool
     note: str
+    profit_target_inr: float
 
 
 def yahoo_symbol(ticker: str) -> str:
     return f"{ticker}.NS"
+
+
+def profit_target_price(entry_price: float, quantity: int) -> float:
+    pct_target = entry_price * (1 + PROFIT_TARGET_PCT / 100)
+    fixed_gain_target = entry_price + (PROFIT_TARGET_GAIN_INR / max(quantity, 1))
+    return round(min(pct_target, fixed_gain_target), 2)
 
 
 def safe_get(info: dict, keys: list[str], default=None):
@@ -241,6 +251,7 @@ def analyze_stock(ticker: str, hist: pd.DataFrame) -> Optional[StockResult]:
         company_name = safe_get(info, ["longName", "shortName"], ticker)
         quantity = max(1, int(INVESTMENT_INR // current_price))
         investment = round(quantity * current_price, 2)
+        profit_target = profit_target_price(current_price, quantity)
 
         y = lambda k: "Y" if details.get(k) else "N"
         mom_str = f"{momentum:+.1f}%" if momentum is not None else "N/A"
@@ -268,6 +279,7 @@ def analyze_stock(ticker: str, hist: pd.DataFrame) -> Optional[StockResult]:
             momentum_12_1_pct=momentum,
             above_200dma=True,
             note=note,
+            profit_target_inr=profit_target,
         )
 
     except Exception as e:
@@ -300,7 +312,10 @@ def main() -> int:
 
     print("Nifty 200 Three-Stage Stock Screener")
     print(f"Stage 1: Price > 200-Day MA  |  Stage 2: Piotroski F >= {MIN_FSCORE}/9  |  Stage 3: 12-1M Momentum")
-    print(f"Investment: Rs{INVESTMENT_INR:,}  |  Universe: {len(NIFTY200_TICKERS)} stocks  |  Date: {today}\n")
+    print(
+        f"Investment: Rs{INVESTMENT_INR:,}  |  Target: min(Rs{PROFIT_TARGET_GAIN_INR}, +{PROFIT_TARGET_PCT}%)  |  "
+        f"Universe: {len(NIFTY200_TICKERS)} stocks  |  Date: {today}\n"
+    )
 
     # ── Stage 1: 200 DMA filter ──────────────────────────────────────────────
     print(f"── Stage 1: 200-Day Moving Average filter ({len(NIFTY200_TICKERS)} stocks) ──")
