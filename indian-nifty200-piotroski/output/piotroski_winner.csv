@@ -1,2 +1,2 @@
-date,ticker,company_name,current_price_inr,f_score,quantity,investment_inr,market_cap_cr,roe_pct,debt_to_equity,pe_ratio,pb_ratio,momentum_12_1_pct,above_200dma,note
-2026-05-25,HINDCOPPER,Hindustan Copper Limited,545.55,9,9,4909.95,52755.99,30.6,0.03,57.43,15.8,137.58,True,F:9/9 Trend:Above200DMA Mom:+137.6% | ROA:Y OCF:Y ROAimprv:Y Accrual:Y DEdown:Y CRup:Y NoDilut:Y GMup:Y ATup:Y
+date,ticker,company_name,current_price_inr,f_score,quantity,investment_inr,market_cap_cr,roe_pct,debt_to_equity,pe_ratio,pb_ratio,momentum_12_1_pct,above_200dma,note,profit_target_inr
+2026-05-29,HINDCOPPER,Hindustan Copper Limited,557.0,9,17,9469.0,53863.24,30.6,0.03,58.63,16.13,129.24,True,F:9/9 Trend:Above200DMA Mom:+129.2% | ROA:Y OCF:Y ROAimprv:Y Accrual:Y DEdown:Y CRup:Y NoDilut:Y GMup:Y ATup:Y,574.49

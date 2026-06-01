@@ -1,9 +1,6 @@
 name: Daily Stock Screener - Google Sheets Update
 
 on:
-  schedule:
-    # GitHub Actions schedules use UTC. 14:30 UTC = 18:30 Asia/Dubai.
-    - cron: "30 14 * * 1-5"
   workflow_dispatch:
     inputs:
       run_mode:

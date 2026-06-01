@@ -1,9 +1,0 @@
-ticker,todays_last_price_inr,price_as_of,last_eod_close_inr,tomorrow_buy_trigger_inr,profit_target_inr,qty,amount_inr,note
-MAFANG,196.48,2026-05-25,196.48,196.43,202.6,76,14929,Passes all recommendation gates; trigger raised to app safety (> 196.42)
-HNGSNGBEES,536.43,2026-05-25,536.43,536.43,553.27,27,14484,Passes all recommendation gates
-HDFCSML250,171.1,2026-05-25,171.1,171.05,176.42,87,14881,Passes all recommendation gates; trigger raised to app safety (> 171.04)
-JUNIORBEES,764.8,2026-05-25,764.8,764.8,788.81,19,14531,Passes all recommendation gates
-AUTOBEES,271.45,2026-05-25,271.45,271.45,279.97,55,14930,Passes all recommendation gates
-GILT5YBEES,64.26,2026-05-25,64.26,64.21,66.23,233,14961,Passes all recommendation gates; trigger raised to app safety (> 64.2)
-INFRABEES,973.79,2026-05-25,973.79,973.79,1004.37,15,14607,Passes all recommendation gates
-LIQUIDBEES,999.99,2026-05-25,999.99,999.99,1031.39,15,15000,Passes all recommendation gates
