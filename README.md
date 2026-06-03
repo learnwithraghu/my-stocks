@@ -4,7 +4,7 @@ Stock and ETF screening with **Turtle trading** + **dual momentum**, local Pytho
 
 ## How we pick stocks — 7 steps
 
-Every Turtle + Dual Momentum stock screener (e.g. Nifty 100) follows the same pipeline. **All gates must pass** — one failure and the symbol is skipped.
+The Turtle + Dual Momentum ETF screener follows the same pipeline. **All gates must pass** — one failure and the symbol is skipped.
 
 ### Step 1 — Start with a fixed universe
 
@@ -12,7 +12,7 @@ We do not scan the whole market. Each project has a predefined list:
 
 | Project | Universe | Benchmark (for relative strength) |
 |---------|----------|----------------------------------|
-| Nifty 100 | 100 NSE large-caps | NIFTYBEES |
+| Indian ETFs | 25 ETFs | NIFTYBEES |
 
 The Indian **ETF** analyzer uses the same momentum idea but a smaller ETF list and a lighter Turtle rule (20-day exit only, no 55-day breakout).
 
@@ -51,19 +51,11 @@ Two extra sanity checks before we trust the signal:
 | **RSI(14)** | Between **40 and 80** — not oversold junk, not extremely overbought |
 | **Volume** | Today's volume ≥ **70%** of the 20-day average — enough participation |
 
-### Step 6 — Rank survivors and pick the best
-
-Every symbol that passed Steps 3–5 gets a **momentum score**:
-
-```
-score = 0.4 × 12M return + 0.3 × 6M return + 0.2 × 3M return + 0.1 × 1M return
-```
-
-We sort by score (highest first). **Nifty 100** and **Indian ETF** keep **top 2** whole-share picks (₹10,000 each):
+We sort by score (highest first). The **Indian ETF** analyzer keeps the **top 2** whole-share picks (₹10,000 each):
 
 | Project | Budget per row | Output |
 |---------|----------------|--------|
-| Nifty 100 / Indian ETF | ₹10,000 each (max 2 picks) | Whole shares |
+| Indian ETF | ₹10,000 each (max 2 picks) | Whole shares |
 
 ### Step 7 — Set tomorrow's buy order
 
@@ -76,7 +68,7 @@ For each final pick we compute:
 
 2. **Profit target** = whichever comes first: **₹500 total gain** on the position or **+3.14%** from the trigger
 
-3. **Quantity** — Nifty 100 / India ETF: `max(1, floor(trade_size ÷ trigger))` whole shares.
+3. **Quantity** — India ETF: `max(1, floor(trade_size ÷ trigger))` whole shares.
 
 4. **Amount** = qty × trigger (within budget for India)
 
@@ -89,7 +81,6 @@ Output lands in `output/final_output_YYYYMMDD.csv`. If **no symbol passes all ga
 | Path | Description |
 |------|-------------|
 | [`indian-etf-analyzer-python/`](indian-etf-analyzer-python/) | 25 Indian ETFs, max 2 picks (₹10,000 each) |
-| [`indian-nifty100-analyzer-python/`](indian-nifty100-analyzer-python/) | Nifty 100 stocks, Turtle + Dual Momentum, max 2 picks |
 | [`indian-nifty200-piotroski/`](indian-nifty200-piotroski/) | Nifty 200 stocks, Piotroski F-Score (1 winner, ₹10000 investment) |
 | [`indian-midsmall-ega-screener/`](indian-midsmall-ega-screener/) | Nifty Midcap + Smallcap, Earnings Growth Acceleration (2 winners, ₹10000 each) |
 | [`indian-midcap-pead-screener/`](indian-midcap-pead-screener/) | Nifty Midcap 100, PEAD + 200 DMA (1 winner, ₹10000) |
@@ -112,7 +103,6 @@ source venv/bin/activate
 ```bash
 # Run all analyzers in one command
 python3 indian-etf-analyzer-python/analyze_etfs.py && \
-python3 indian-nifty100-analyzer-python/analyze_stocks.py && \
 python3 indian-nifty200-piotroski/analyze_piotroski.py && \
 python3 indian-midsmall-ega-screener/analyze_stocks.py && \
 python3 indian-midcap-pead-screener/analyze_pead.py
@@ -125,9 +115,6 @@ python3 indian-midcap-pead-screener/analyze_pead.py
 cd indian-etf-analyzer-python
 python3 analyze_etfs.py
 
-# Nifty 100 Turtle + Dual Momentum
-cd ../indian-nifty100-analyzer-python
-python3 analyze_stocks.py
 
 # Nifty 200 Piotroski F-Score (1 winner, ₹10000 investment)
 cd ../indian-nifty200-piotroski

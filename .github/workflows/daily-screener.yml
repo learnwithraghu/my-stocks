@@ -31,7 +31,6 @@ jobs:
           python -m pip install --upgrade pip setuptools
           pip install -r requirements-google-sheets.txt
           pip install -r indian-etf-analyzer-python/requirements.txt
-          pip install -r indian-nifty100-analyzer-python/requirements.txt
 
       - name: Verify Google Sheets dependencies
         run: |
@@ -42,10 +41,6 @@ jobs:
         run: python indian-etf-analyzer-python/analyze_etfs.py
         continue-on-error: true
 
-      - name: Run Nifty 100 Turtle + DM
-        if: ${{ (github.event.inputs.run_mode || 'full') == 'full' }}
-        run: python indian-nifty100-analyzer-python/analyze_stocks.py
-        continue-on-error: true
 
       - name: Run Nifty 200 Piotroski
         if: ${{ (github.event.inputs.run_mode || 'full') == 'full' }}
@@ -75,7 +70,6 @@ jobs:
           name: screener-outputs
           path: |
             indian-etf-analyzer-python/output/*.csv
-            indian-nifty100-analyzer-python/output/*.csv
             indian-nifty200-piotroski/output/*.csv
             indian-midsmall-ega-screener/output/*.csv
             indian-midcap-pead-screener/output/*.csv

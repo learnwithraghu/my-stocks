@@ -24,11 +24,6 @@ SHEET_STRATEGIES = [
         "has_date_column": False,
     },
     {
-        "name": "nifty100",
-        "csv_path": "indian-nifty100-analyzer-python/output/final_output_{date}.csv",
-        "has_date_column": False,
-    },
-    {
         "name": "piotroski",
         "csv_path": "indian-nifty200-piotroski/output/piotroski_winner.csv",
         "has_date_column": True,
@@ -48,7 +43,7 @@ SHEET_STRATEGIES = [
     },
 ]
 
-DEPRECATED_SHEETS = ["us_stocks", "german_stocks"]
+DEPRECATED_SHEETS = ["us_stocks", "german_stocks", "nifty100"]
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -119,8 +114,12 @@ def prepare_dataframe(df: pd.DataFrame, strategy: dict, run_date: str) -> pd.Dat
     if strategy.get("has_date_column") and strategy.get("date_column") not in df.columns:
         df[strategy["date_column"]] = run_date
     elif not strategy.get("has_date_column"):
-        if "price_as_of" in df.columns:
-            df["date"] = df["price_as_of"].iloc[0] if len(df) > 0 else run_date
+        if "price_as_of" in df.columns and len(df) > 0:
+            val = df["price_as_of"].iloc[0]
+            if pd.isna(val) or str(val).strip() == "":
+                df["date"] = run_date
+            else:
+                df["date"] = val
         else:
             df["date"] = run_date
     return order_columns(df)
@@ -194,7 +193,17 @@ def delete_rows_for_date(worksheet: gspread.Worksheet, batch_date: str) -> int:
 
 
 def row_to_values(row: pd.Series, headers: list[str]) -> list[str]:
-    return [str(row.get(h, "")) if h in row.index else "" for h in headers]
+    res = []
+    for h in headers:
+        if h in row.index:
+            val = row[h]
+            if pd.isna(val):
+                res.append("")
+            else:
+                res.append(str(val))
+        else:
+            res.append("")
+    return res
 
 
 def upsert_to_sheet(

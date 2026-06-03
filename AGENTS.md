@@ -9,7 +9,6 @@ This repo contains Python stock and ETF screeners for Indian markets. The main d
 Primary projects:
 
 - `indian-etf-analyzer-python/`: Indian ETF Turtle/Dual Momentum screener, top 2 picks at Rs 10,000 each.
-- `indian-nifty100-analyzer-python/`: Nifty 100 Turtle/Dual Momentum screener, top 2 picks at Rs 10,000 each.
 - `indian-nifty200-piotroski/`: Nifty 200 Piotroski F-Score screener, 1 winner at Rs 10,000.
 - `indian-midsmall-ega-screener/`: Midcap/Smallcap Earnings Growth Acceleration screener, 2 winners at Rs 10,000 each.
 - `indian-midcap-pead-screener/`: Nifty Midcap 100 PEAD screener, 1 winner at Rs 10,000.
@@ -28,7 +27,6 @@ From the repo root:
 
 ```bash
 python indian-etf-analyzer-python/analyze_etfs.py
-python indian-nifty100-analyzer-python/analyze_stocks.py
 python indian-nifty200-piotroski/analyze_piotroski.py
 python indian-midsmall-ega-screener/analyze_stocks.py
 python indian-midcap-pead-screener/analyze_pead.py
