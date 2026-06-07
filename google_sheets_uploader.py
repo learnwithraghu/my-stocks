@@ -24,7 +24,7 @@ SHEET_STRATEGIES = [
         "has_date_column": False,
     },
     {
-        "name": "piotroski",
+        "name": "nifty200_3stage",
         "csv_path": "indian-nifty200-piotroski/output/piotroski_winner.csv",
         "has_date_column": True,
         "date_column": "date",
@@ -261,6 +261,15 @@ def main() -> int:
         spreadsheet = create_spreadsheet_if_needed(gc, sheet_id)
     except gspread.exceptions.SpreadsheetNotFound:
         return 1
+
+    # Rename old 'piotroski' sheet to the new name if it exists (preserves history)
+    try:
+        old_ws = spreadsheet.worksheet("piotroski")
+        old_ws.update_title("nifty200_3stage")
+        print("  Renamed sheet 'piotroski' → 'nifty200_3stage'")
+    except gspread.exceptions.WorksheetNotFound:
+        # No old sheet, will be created later by get_or_create_sheet
+        pass
 
     remove_deprecated_sheets(spreadsheet)
 

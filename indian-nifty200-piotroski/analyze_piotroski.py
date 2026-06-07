@@ -2,9 +2,9 @@
 """
 Nifty 200 Three-Stage Stock Screener
 --------------------------------------
-Stage 1: Price > 200-Day Moving Average  (trend health pre-filter)
-Stage 2: Piotroski F-Score >= 7          (true YoY comparisons, not proxies)
-Stage 3: 12-1 Month Price Momentum       (market confirmation; highest wins)
+Stage 1: Price > 200-Day MA AND Price > 20-Day MA  (long-term trend + short-term health)
+Stage 2: Piotroski F-Score >= 7                    (true YoY comparisons, not proxies)
+Stage 3: 12-1 Month Price Momentum                 (market confirmation; highest wins)
 
 Investment per winner: 10000 INR
 """
@@ -117,6 +117,14 @@ def passes_200dma_filter(hist: pd.DataFrame) -> bool:
     sma200 = hist["Close"].rolling(200).mean().iloc[-1]
     current = hist["Close"].iloc[-1]
     return bool(current > sma200)
+
+
+def passes_20dma_filter(hist: pd.DataFrame) -> bool:
+    """Short-term health check: price must be above 20-day MA.
+    Catches stocks in recent downtrends that still pass the long-term 200-DMA filter."""
+    sma20 = hist["Close"].rolling(20).mean().iloc[-1]
+    current = hist["Close"].iloc[-1]
+    return bool(current > sma20)
 
 
 def calculate_momentum_12_1(hist: pd.DataFrame) -> Optional[float]:
@@ -287,6 +295,22 @@ def analyze_stock(ticker: str, hist: pd.DataFrame) -> Optional[StockResult]:
         return None
 
 
+def last_recommended_ticker(csv_path: Path) -> Optional[str]:
+    """Return the ticker from the last row of the output CSV, or None if unavailable."""
+    if not csv_path.exists():
+        return None
+    try:
+        df = pd.read_csv(csv_path)
+        if df.empty or "ticker" not in df.columns:
+            return None
+        last = df.iloc[-1]["ticker"]
+        if pd.isna(last) or str(last).strip() == "":
+            return None
+        return str(last).strip()
+    except Exception:
+        return None
+
+
 def write_csv(path: Path, result: Optional[StockResult]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     today = datetime.now(IST).strftime("%Y-%m-%d")
@@ -311,14 +335,14 @@ def main() -> int:
     today = datetime.now(IST).strftime("%Y-%m-%d")
 
     print("Nifty 200 Three-Stage Stock Screener")
-    print(f"Stage 1: Price > 200-Day MA  |  Stage 2: Piotroski F >= {MIN_FSCORE}/9  |  Stage 3: 12-1M Momentum")
+    print(f"Stage 1: Price > 200-DMA & 20-DMA  |  Stage 2: Piotroski F >= {MIN_FSCORE}/9  |  Stage 3: 12-1M Momentum")
     print(
         f"Investment: Rs{INVESTMENT_INR:,}  |  Target: min(Rs{PROFIT_TARGET_GAIN_INR}, +{PROFIT_TARGET_PCT}%)  |  "
         f"Universe: {len(NIFTY200_TICKERS)} stocks  |  Date: {today}\n"
     )
 
-    # ── Stage 1: 200 DMA filter ──────────────────────────────────────────────
-    print(f"── Stage 1: 200-Day Moving Average filter ({len(NIFTY200_TICKERS)} stocks) ──")
+    # ── Stage 1: Trend filter — 200-DMA (long-term) + 20-DMA (short-term health) ({len(NIFTY200_TICKERS)} stocks) ──
+    print(f"── Stage 1: Trend filter — 200-DMA (long-term) + 20-DMA (short-term health) ({len(NIFTY200_TICKERS)} stocks) ──")
     stage1_survivors: list[tuple[str, pd.DataFrame]] = []
 
     for i, ticker in enumerate(NIFTY200_TICKERS, 1):
@@ -327,13 +351,15 @@ def main() -> int:
         if hist is None:
             print("skip (no data)")
             continue
-        if passes_200dma_filter(hist):
-            print("pass")
-            stage1_survivors.append((ticker, hist))
-        else:
+        if not passes_200dma_filter(hist):
             print("fail (below 200DMA)")
+        elif not passes_20dma_filter(hist):
+            print("fail (below 20DMA — short-term downtrend)")
+        else:
+            print("pass (above 200DMA + 20DMA)")
+            stage1_survivors.append((ticker, hist))
 
-    print(f"\nStage 1: {len(NIFTY200_TICKERS)} -> {len(stage1_survivors)} stocks above 200 DMA\n")
+    print(f"\nStage 1: {len(NIFTY200_TICKERS)} -> {len(stage1_survivors)} stocks above both 200-DMA and 20-DMA\n")
 
     # ── Stage 2: Piotroski F-Score filter ───────────────────────────────────
     print(f"── Stage 2: Piotroski F-Score filter (need >= {MIN_FSCORE}/9, true YoY) ──")
@@ -357,11 +383,23 @@ def main() -> int:
         if with_mom:
             positive = [c for c in with_mom if c.momentum_12_1_pct > 0]
             pool = positive if positive else with_mom
-            winner = max(pool, key=lambda x: x.momentum_12_1_pct)
+            ranked = sorted(pool, key=lambda x: x.momentum_12_1_pct, reverse=True)
         else:
             # Fallback: no momentum data — sort by F-score then market cap
             candidates.sort(key=lambda x: (x.f_score, x.market_cap_cr or 0), reverse=True)
-            winner = candidates[0]
+            ranked = candidates
+
+        # ── Deduplication: skip if same ticker as previous pick ─────────────
+        prev_ticker = last_recommended_ticker(root / "output" / "piotroski_winner.csv")
+        winner = None
+        for candidate in ranked:
+            if prev_ticker and candidate.ticker == prev_ticker:
+                print(f"  [dedup] Skipping {candidate.ticker} — same as previous pick ({prev_ticker})")
+                continue
+            winner = candidate
+            break
+        if winner is None and prev_ticker:
+            print(f"  [dedup] All candidates match previous pick or pool empty — no pick today")
 
     # ── Summary ──────────────────────────────────────────────────────────────
     print("=" * 60)
