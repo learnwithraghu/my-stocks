@@ -1,0 +1,2 @@
+date,ticker,company_name,current_price_inr,quantity,investment_inr,surprise_pct,earnings_days_ago,momentum_12_1_pct,above_200dma,rsi_14,gap_to_52wh_pct,pe_ratio,market_cap_cr,pead_rank_score,note,profit_target_inr
+2026-05-29,CUMMINSIND,Cummins India Limited,5945.5,1,5945.5,33.62,2,82.1,True,67.63,2.53,69.96,164809.26,57.86,PEAD:quarterly_qoq Surprise:+33.6% Earnings:2d ago | 52wh_gap:2.5% 5d:+10.4% Mom12-1:+82.1% RSI:67.6,6132.19
