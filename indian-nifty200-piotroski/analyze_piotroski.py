@@ -4,7 +4,7 @@ Nifty 200 Three-Stage Stock Screener
 --------------------------------------
 Stage 1: Price > 200-Day MA AND Price > 20-Day MA  (long-term trend + short-term health)
 Stage 2: Piotroski F-Score >= 7                    (true YoY comparisons, not proxies)
-Stage 3: 12-1 Month Price Momentum                 (market confirmation; highest wins)
+Stage 3: 52-week high sweet spot (5-10% below) + 12-1 Month Momentum
 
 Investment per winner: 10000 INR
 """
@@ -21,6 +21,11 @@ from typing import Optional
 import pandas as pd
 import yfinance as yf
 
+_ROOT = Path(__file__).resolve().parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
+from filters_52w import BAND_STOCK, passes_52w_sweet_spot
 from nifty200_universe import NIFTY200_TICKERS
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -335,7 +340,10 @@ def main() -> int:
     today = datetime.now(IST).strftime("%Y-%m-%d")
 
     print("Nifty 200 Three-Stage Stock Screener")
-    print(f"Stage 1: Price > 200-DMA & 20-DMA  |  Stage 2: Piotroski F >= {MIN_FSCORE}/9  |  Stage 3: 12-1M Momentum")
+    print(
+        f"Stage 1: Price > 200-DMA & 20-DMA  |  Stage 2: Piotroski F >= {MIN_FSCORE}/9  |  "
+        f"Stage 3: {BAND_STOCK[0]:.0f}-{BAND_STOCK[1]:.0f}% below 52wh + 12-1M Momentum"
+    )
     print(
         f"Investment: Rs{INVESTMENT_INR:,}  |  Target: min(Rs{PROFIT_TARGET_GAIN_INR}, +{PROFIT_TARGET_PCT}%)  |  "
         f"Universe: {len(NIFTY200_TICKERS)} stocks  |  Date: {today}\n"
@@ -376,18 +384,35 @@ def main() -> int:
 
     print(f"\nStage 2: {len(stage1_survivors)} -> {len(candidates)} stocks with F >= {MIN_FSCORE}\n")
 
-    # ── Stage 3: Momentum tiebreaker ────────────────────────────────────────
+    # ── Stage 3: 52-week sweet spot + momentum tiebreaker ───────────────────
+    hist_by_ticker = {ticker: hist for ticker, hist in stage1_survivors}
+    sweet_spot: list[StockResult] = []
+    for c in candidates:
+        hist = hist_by_ticker.get(c.ticker)
+        if hist is None:
+            continue
+        passes, gap_pct, reason = passes_52w_sweet_spot(hist, c.current_price_inr, *BAND_STOCK)
+        if passes:
+            sweet_spot.append(c)
+        else:
+            print(f"  [52wh] Skipping {c.ticker} — {reason} (gap {gap_pct:.1f}%)")
+
+    print(
+        f"\nStage 3 pre-filter: {len(candidates)} F-qualified -> "
+        f"{len(sweet_spot)} in {BAND_STOCK[0]:.0f}-{BAND_STOCK[1]:.0f}% 52wh band\n"
+    )
+
     winner = None
-    if candidates:
-        with_mom = [c for c in candidates if c.momentum_12_1_pct is not None]
+    if sweet_spot:
+        with_mom = [c for c in sweet_spot if c.momentum_12_1_pct is not None]
         if with_mom:
             positive = [c for c in with_mom if c.momentum_12_1_pct > 0]
             pool = positive if positive else with_mom
             ranked = sorted(pool, key=lambda x: x.momentum_12_1_pct, reverse=True)
         else:
             # Fallback: no momentum data — sort by F-score then market cap
-            candidates.sort(key=lambda x: (x.f_score, x.market_cap_cr or 0), reverse=True)
-            ranked = candidates
+            sweet_spot.sort(key=lambda x: (x.f_score, x.market_cap_cr or 0), reverse=True)
+            ranked = sweet_spot
 
         # ── Deduplication: skip if same ticker as previous pick ─────────────
         prev_ticker = last_recommended_ticker(root / "output" / "piotroski_winner.csv")
@@ -406,7 +431,7 @@ def main() -> int:
     print("STAGE SUMMARY")
     print(f"  Stage 1 (200 DMA)  : {len(NIFTY200_TICKERS)} -> {len(stage1_survivors)} stocks")
     print(f"  Stage 2 (F >= {MIN_FSCORE})   : {len(stage1_survivors)} -> {len(candidates)} stocks")
-    print(f"  Stage 3 (Momentum) : {len(candidates)} -> 1 winner")
+    print(f"  Stage 3 (52wh+Momentum): {len(candidates)} -> {len(sweet_spot)} -> 1 winner")
     print("=" * 60)
 
     print("\nTHREE-STAGE WINNER")

@@ -9,10 +9,21 @@ TRADING_DAYS_52W = 252
 HIGH_TOLERANCE = 0.999
 
 # Method-tuned bands: min/max % below 52-week high.
+# Individual stocks (Piotroski, PEAD): avoid fresh highs while keeping momentum nearby.
+BAND_STOCK = (5.0, 10.0)
 # EGA: tight band — proximity is the primary signal (2-3 week horizon).
-BAND_EGA = (3.0, 10.0)
+BAND_EGA = (5.0, 10.0)
 # Turtle + Dual Momentum: slightly wider — trend already confirmed by breakout gates.
 BAND_TURTLE_DM = (4.0, 12.0)
+
+
+def above_200dma(hist: pd.DataFrame, price: float | None = None) -> bool | None:
+    """True when price is above the 200-day moving average; None if history is insufficient."""
+    if hist is None or hist.empty or len(hist) < 200:
+        return None
+    sma200 = float(hist["Close"].rolling(200).mean().iloc[-1])
+    current = price if price is not None else float(hist["Close"].iloc[-1])
+    return bool(current > sma200)
 
 
 def gap_to_52w_high_pct(high_52w: float, current_price: float) -> float:

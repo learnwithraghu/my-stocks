@@ -19,7 +19,7 @@ _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from filters_52w import BAND_TURTLE_DM, passes_52w_sweet_spot
+from filters_52w import BAND_TURTLE_DM, above_200dma, passes_52w_sweet_spot
 
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -235,6 +235,7 @@ def analyze_one(etf: dict, nifty_3m: float | None) -> EtfMetrics:
     above_exit = price > dc_low if dc_low is not None else None
 
     passes_52w, gap_52wh, _ = passes_52w_sweet_spot(df, price, *BAND_TURTLE_DM)
+    above_dma = above_200dma(df, price)
 
     gates_fail = (
         r12 is None
@@ -246,6 +247,7 @@ def analyze_one(etf: dict, nifty_3m: float | None) -> EtfMetrics:
         or vol_ratio is None
         or vol_ratio < VOL_MIN_FACTOR
         or above_exit is not True
+        or above_dma is not True
         or not passes_52w
     )
     recommended = not gates_fail

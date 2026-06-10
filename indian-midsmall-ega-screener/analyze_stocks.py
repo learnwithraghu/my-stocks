@@ -7,7 +7,7 @@ Horizon : 2-3 weeks
 Winners : Top 2 by EGA composite score
 Budget  : Rs 10,000 per stock
 
-Stage 1 (fast)   : Within 10% of 52-week high + positive 5-day momentum
+Stage 1 (fast)   : Within 5-10% of 52-week high + above 200-DMA + positive 5-day momentum
 Stage 2 (detail) : EGA quality gate (earnings growth >= 10%, revenue >= 5%)
                    + RSI(14) 50-78 + volume confirmation
 Stage 3          : EGA composite score -> top 2 winners
@@ -31,7 +31,7 @@ _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from filters_52w import BAND_EGA, high_52w_from_history, passes_52w_sweet_spot
+from filters_52w import BAND_EGA, above_200dma, high_52w_from_history, passes_52w_sweet_spot
 
 IST = ZoneInfo("Asia/Kolkata")
 INVESTMENT_INR = 10_000
@@ -136,8 +136,9 @@ def passes_proximity_filter(
 
     passes_52w, gap_pct, _ = passes_52w_sweet_spot(hist, current_price, *BAND_EGA)
     momentum_5d = round((hist["Close"].iloc[-1] / hist["Close"].iloc[-6] - 1) * 100, 2)
+    dma_ok = above_200dma(hist, current_price)
 
-    passes = passes_52w and (momentum_5d > 0)
+    passes = passes_52w and (momentum_5d > 0) and (dma_ok is True)
     return passes, gap_pct, momentum_5d
 
 
@@ -322,7 +323,7 @@ def main() -> int:
     # ── Stage 1: 52-week high proximity + 5-day momentum ────────────────────
     print(
         f"── Stage 1: {EGA_MIN_GAP_PCT:.0f}-{EGA_MAX_GAP_PCT:.0f}% below 52-week high "
-        f"(no fresh high in 2w) + positive 5-day momentum ──"
+        f"(no fresh high in 2w) + above 200-DMA + positive 5-day momentum ──"
     )
     stage1_survivors: list[tuple[str, pd.DataFrame, dict]] = []
 

@@ -21,6 +21,11 @@ from typing import Optional
 import pandas as pd
 import yfinance as yf
 
+_ROOT = Path(__file__).resolve().parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
+from filters_52w import BAND_STOCK, passes_52w_sweet_spot
 from midcap100_universe import NIFTY_MIDCAP100_TICKERS
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -34,7 +39,6 @@ MAX_EARNINGS_DAYS = 30
 MIN_SURPRISE_ESTIMATE = 0.03
 MIN_SURPRISE_QOQ = 0.08
 MIN_SURPRISE_INFO = 0.10
-MAX_DRIFT_GAP = 0.15
 
 OUTPUT_COLUMNS = [
     "date",
@@ -291,18 +295,17 @@ def earnings_recency_days(stock: yf.Ticker, info: dict, now: datetime) -> int:
 
 
 def passes_drift_filter(info: dict, hist: pd.DataFrame) -> tuple[bool, float, float]:
-    """Within 15% of 52-week high and 5-day return >= 0."""
+    """5-10% below 52-week high (no fresh high in 2w) and 5-day return >= 0."""
     current = safe_get_val(info, ["currentPrice", "regularMarketPrice", "previousClose"])
-    high_52w = safe_get_val(info, ["fiftyTwoWeekHigh"])
-    if not current or not high_52w or high_52w <= 0:
+    if not current or current <= 0:
         return False, 0.0, 0.0
 
-    gap_pct = round((high_52w - current) / high_52w * 100, 2)
+    passes_52w, gap_pct, _ = passes_52w_sweet_spot(hist, current, *BAND_STOCK)
     if len(hist) < 6:
         return False, gap_pct, 0.0
 
     momentum_5d = round((hist["Close"].iloc[-1] / hist["Close"].iloc[-6] - 1) * 100, 2)
-    passes = (gap_pct <= MAX_DRIFT_GAP * 100) and (momentum_5d >= 0)
+    passes = passes_52w and (momentum_5d >= 0)
     return passes, gap_pct, momentum_5d
 
 
@@ -463,7 +466,8 @@ def main() -> int:
     print(f"\nStage 1: {len(NIFTY_MIDCAP100_TICKERS)} -> {len(stage1_survivors)} stocks\n")
 
     print(
-        f"── Stage 2: PEAD (earnings <= {MAX_EARNINGS_DAYS}d, surprise, drift <= {MAX_DRIFT_GAP*100:.0f}% from 52wh) ──"
+        f"── Stage 2: PEAD (earnings <= {MAX_EARNINGS_DAYS}d, surprise, "
+        f"{BAND_STOCK[0]:.0f}-{BAND_STOCK[1]:.0f}% below 52wh + 5d momentum) ──"
     )
     candidates: list[StockResult] = []
 
