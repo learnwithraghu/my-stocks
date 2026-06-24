@@ -41,6 +41,12 @@ SHEET_STRATEGIES = [
         "has_date_column": True,
         "date_column": "date",
     },
+    {
+        "name": "smallcap_box_breakout_15k",
+        "csv_path": "indian-smallcap-box-screener/output/box_winner.csv",
+        "has_date_column": True,
+        "date_column": "date",
+    },
 ]
 
 DEPRECATED_SHEETS = ["us_stocks", "german_stocks", "nifty100"]

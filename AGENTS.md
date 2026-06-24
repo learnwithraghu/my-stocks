@@ -12,6 +12,7 @@ Primary projects:
 - `indian-nifty200-piotroski/`: Nifty 200 Piotroski F-Score screener, 1 winner at Rs 10,000.
 - `indian-midsmall-ega-screener/`: Midcap/Smallcap Earnings Growth Acceleration screener, 2 winners at Rs 10,000 each.
 - `indian-midcap-pead-screener/`: Nifty Midcap 100 PEAD screener, 1 winner at Rs 10,000.
+- `indian-smallcap-box-screener/`: Nifty Smallcap 100 box breakout screener, 1 winner at Rs 15,000.
 - `.agent/turtle-dual-momentum/`: Agent skill and generic runner for Turtle/Dual Momentum strategies.
 
 ## Runtime And Dependencies
@@ -30,6 +31,7 @@ python indian-etf-analyzer-python/analyze_etfs.py
 python indian-nifty200-piotroski/analyze_piotroski.py
 python indian-midsmall-ega-screener/analyze_stocks.py
 python indian-midcap-pead-screener/analyze_pead.py
+python indian-smallcap-box-screener/analyze_box.py
 ```
 
 The GitHub Action runs these on weekdays at 18:30 Dubai time / 20:00 IST:
@@ -44,7 +46,7 @@ GitHub Actions cron uses UTC.
 
 - Analyzer outputs are written under each analyzer's `output/` directory.
 - Turtle/Dual Momentum analyzers write `output/final_output_YYYYMMDD.csv`.
-- Other analyzers write fixed CSVs such as `piotroski_winner.csv`, `ega_winners.csv`, and `midcap_winner.csv`.
+- Other analyzers write fixed CSVs such as `piotroski_winner.csv`, `ega_winners.csv`, `midcap_winner.csv`, and `box_winner.csv`.
 - Generated output CSVs are artifacts, not source. Do not commit them unless the user explicitly asks.
 - If no symbol passes filters, scripts usually emit a single "No stocks to recommend at this time" row.
 - Every method uses Rs 10,000 per selected pick.

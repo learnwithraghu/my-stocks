@@ -31,6 +31,7 @@ jobs:
           python -m pip install --upgrade pip setuptools
           pip install -r requirements-google-sheets.txt
           pip install -r indian-etf-analyzer-python/requirements.txt
+          pip install -r indian-smallcap-box-screener/requirements.txt
 
       - name: Verify Google Sheets dependencies
         run: |
@@ -57,6 +58,11 @@ jobs:
         run: python indian-midcap-pead-screener/analyze_pead.py
         continue-on-error: true
 
+      - name: Run Smallcap Box Breakout Screener
+        if: ${{ (github.event.inputs.run_mode || 'full') == 'full' }}
+        run: python indian-smallcap-box-screener/analyze_box.py
+        continue-on-error: true
+
       - name: Upload to Google Sheets
         env:
           GOOGLE_SHEETS_CREDENTIALS: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}
@@ -73,4 +79,5 @@ jobs:
             indian-nifty200-piotroski/output/*.csv
             indian-midsmall-ega-screener/output/*.csv
             indian-midcap-pead-screener/output/*.csv
+            indian-smallcap-box-screener/output/*.csv
           retention-days: 7
